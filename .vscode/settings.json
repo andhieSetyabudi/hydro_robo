@@ -1,0 +1,9 @@
+{
+    "terminal.integrated.env.windows": {
+        "PATH": "C:\\Users\\M.S.I\\.platformio\\penv\\Scripts;C:\\Users\\M.S.I\\.platformio\\penv;C:\\Program Files (x86)\\Common Files\\Intel\\Shared Files\\cpp\\bin\\Intel64;C:\\Inprise\\vbroker\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Microsoft VS Code\\bin;C:\\Program Files (x86)\\STMicroelectronics\\STM32 ST-LINK Utility\\ST-LINK Utility;C:\\Users\\M.S.I\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Program Files (x86)\\HP\\Common\\HPDestPlgIn\\;C:\\Users\\M.S.I\\.platformio\\penv\\Scripts;C:\\Program Files (x86)\\Common Files\\Intel\\Shared Files\\cpp\\bin\\Intel64;C:\\Inprise\\vbroker\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Microsoft VS Code\\bin;C:\\Program Files (x86)\\STMicroelectronics\\STM32 ST-LINK Utility\\ST-LINK Utility;C:\\Users\\M.S.I\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Program Files (x86)\\HP\\Common\\HPDestPlgIn\\;C:\\Users\\M.S.I\\.platformio\\penv\\Scripts",
+        "PLATFORMIO_CALLER": "vscode"
+    },
+    "files.associations": {
+        "interrupt.h": "c"
+    }
+}
