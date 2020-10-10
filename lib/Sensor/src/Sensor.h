@@ -61,6 +61,10 @@ class Sensor{
         static void setSleep(bool sleep);
         static bool isSleep(void);
 
+        static float getWaterTemperature(void)  { return sens.water_temperature;}
+        static float getpH(void)                { return sens.pH;}
+        static float getConductivity(void)      { return sens.conductivity;}
+        static float getSalinity(void)          { return sens.salinity;}
     // sub-class 
         class water;
         class air;

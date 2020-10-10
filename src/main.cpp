@@ -17,13 +17,12 @@ void system_halt(uint32_t t)
   vTaskDelay(t / portTICK_PERIOD_MS);
 }
 
+bool systemReady;
+
 void setup() {
   setup_bsp();
-  Serial.begin(115200);
-  while (!Serial)
-  {
-    ; // wait for serial port to connect. Needed for native USB, on LEONARDO, MICRO, YUN, and other 32u4 based boards.
-  }
+  serial_com::setHalt(system_halt);
+  serial_com::setup();
   /**
    * Task creation
    */
@@ -81,16 +80,17 @@ void TaskLed(void *pvParameters)
 void TaskSerial(void *pvParameters)
 {
   (void)pvParameters;
+  while(!systemReady) vTaskDelay(50);
   for (;;)
   {
-    Serial.println("======== Tasks status ========");
-    Serial.print("Tick count: ");
-    Serial.print(xTaskGetTickCount());
-    Serial.print(", Task count: ");
-    Serial.print(uxTaskGetNumberOfTasks());
+    // Serial.println("======== Tasks status ========");
+    // Serial.print("Tick count: ");
+    // Serial.print(xTaskGetTickCount());
+    // Serial.print(", Task count: ");
+    // Serial.print(uxTaskGetNumberOfTasks());
 
-    Serial.println();
-    Serial.println();
+    // Serial.println();
+    // Serial.println();
 
     // Serial task status
     // Serial.print("- TASK ");
@@ -108,9 +108,9 @@ void TaskSerial(void *pvParameters)
     // Serial.print(uxTaskGetStackHighWaterMark(taskBlinkHandle));
     // Serial.println();
 
-    Serial.println();
-
-    vTaskDelay(5000);// / portTICK_PERIOD_MS);
+    // Serial.println();
+    serial_com::app();
+    vTaskDelay(100);// / portTICK_PERIOD_MS);
   }
 }
 
@@ -124,15 +124,15 @@ void TaskBlink(void *pvParameters)
   pinMode(LED_BUILTIN, OUTPUT);
   Sensor::attachDelayCallback(system_halt);
   Sensor::water::initSensorBoard();
-
-  uint32_t time_reading = millis();
-  // Sensor::water::setup();
+  unsigned long time_reading = millis();
+  systemReady = true;
+      // Sensor::water::setup();
   for (;;)
   {
-    Serial.println("reading sensor");
-    if ( millis() - time_reading <= 1000 )
+    // Serial.println("reading sensor");
+    if ( millis() - time_reading >= 500 )
     {
-      Serial.println("reading sensor");
+      // Serial.println("reading sensor");
       Sensor::water::app();
       time_reading = millis();
     }

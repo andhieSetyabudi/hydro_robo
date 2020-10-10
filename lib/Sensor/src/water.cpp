@@ -1,5 +1,6 @@
 #include "board_io.h"
 #include "Sensor.h"
+#include "extra/equation.h"
 
 const char boardKey[][4] = {"pH", "DO", "EC", "RTD"};
 
@@ -33,38 +34,46 @@ void Sensor::water::initSensorBoard(void)
     ezoSerial.begin(9600);
     ezoSerial.flush();
     uint8_t infoIndex = 0;
-    Serial.println("get ezo info ");
+    Serial.println("Water Sensor Initializing");
     for (uint8_t id = 0; id < TENTACLES_CH_NUM; id++)
     {
         tentacles_open_channel(id);
-        waterDelay(10);
+        waterDelay(20);
         char buf_msg[20] = "";
         ezo_Module.flush_rx_buffer();
         ezo_Module.send_cmd("i", buf_msg, 19);
         if (strlen(buf_msg) > 1) {
-            Serial.println("info = " + String(buf_msg));
+            //Serial.println("info = " + String(buf_msg));
             for (uint8_t key = 0; key < NUM_OF_EZO; key++)
             {
-                Serial.println("key = " + String(boardKey[key]));
+              //  Serial.println("key = " + String(boardKey[key]));
                 if (strstr((const char*)buf_msg, boardKey[key]) != NULL)
                 {
                     strcpy(moduleInfo[infoIndex].name, boardKey[key]);
                     moduleInfo[infoIndex].ch = id;
                     moduleInfo[infoIndex].status = 0;
                     infoIndex++;
-                    Serial.println("board found " + String(boardKey[key]));
+                    Serial.println("module found " + String(boardKey[key])+" at ch"+String(id));
                     ezo_Module.send_cmd("C,0", NULL, 0); //send the command to turn off continuous mode
                                                          //in this case we arent concerned about waiting for the reply
                     waterDelay(100);
                     ezo_Module.send_cmd("*OK,0", NULL, 0);
-                    if ( key == 2 ) // specialy cas for EC
+                    if ( key == 2 ) // specialy case for EC
                     {
                         ezo_Module.send_cmd("K,1", NULL, 0);
-                    };
+                    }
+                    else if ( key == 1 ) // specialy case for DO
+                    {
+                        ezo_Module.send_cmd("O,mg,0", NULL, 0);
+                        waterDelay(10);
+                        ezo_Module.send_cmd("O,%,1", NULL, 0);
+                    }
                     break; // quit from loop
                 };
             };
         }
+        if (infoIndex >= NUM_OF_EZO)
+            break;
         waterDelay(20);
     };
 }
@@ -78,10 +87,11 @@ void Sensor::water::loadParamSensor(const char *sens)
         Sensor::sens.pH = ezo_Module.get_reading();
     }
     else if (strstr((const char *)sens, boardKey[1]) != NULL) { // DO
-        Sensor::sens.DO2_mgl = ezo_Module.get_reading();
+        Sensor::sens.DO2_percent = ezo_Module.get_reading();
     }
     else if (strstr((const char *)sens, boardKey[2]) != NULL) { // EC
         Sensor::sens.conductivity = ezo_Module.get_reading();
+        Sensor::sens.salinity = condToSal(Sensor::sens.conductivity, Sensor::sens.water_temperature);
     }
     else if (strstr((const char *)sens, boardKey[3]) != NULL) { // RTD
         Sensor::sens.water_temperature = ezo_Module.get_reading();
@@ -101,7 +111,7 @@ void Sensor::water::setup(void)
 void Sensor::water::app(void)
 {
     // if sensor need to sleep
-    if ( Sensor::isSleep() ) return;
+    // if ( Sensor::isSleep() ) return;
 
     if (ch_index >= NUM_OF_EZO ){
         sens_temp_comp = ~sens_temp_comp;

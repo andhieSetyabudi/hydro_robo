@@ -28,6 +28,8 @@
 #define EZO_TX_PIN          10
 #define EZO_RX_PIN          11
 
+#define SERIAL_BAUD         115200
+
 void setup_bsp(void);
 
 void tentacles_open_channel(uint8_t ch);

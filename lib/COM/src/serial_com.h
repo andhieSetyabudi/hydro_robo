@@ -1,14 +1,13 @@
-#pragma once
+// #pragma once
 #ifndef _SERIAL_COM_H_
 #define _SERIAL_COM_H
 
-#include "Firmata.h"
 #include "Sensor.h"
 
-struct {
-    const char* ping;
+struct serial_keyword{
+    const char* ping = "ping";
 // read command
-    const char* read_all;
+    const char* read_all = "read-all";
     const char* read_pH;
     const char* read_conductivity;
     const char* read_salinity;
@@ -23,15 +22,21 @@ struct {
     const char* write_calibration_file;
     const char* write_tds_constant;
     const char* write_elevation;
-
-}serial_keyword;
-
+};
 
 class serial_com{
-private:
+    private:
+        static void (*halt)(uint32_t t);
+        static void serial_halt(uint32_t t);
+        
+    public:
+        static void setup();
+        static void app();
+        static void parser(void);
 
-public:
-    static void setuo();
-    static void app();
+        static void setHalt(void (*halt) (uint32_t t));
+
+        static String serialBuffer;
+        static bool serialFlag;
 };
 #endif
