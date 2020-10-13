@@ -1,10 +1,12 @@
 #include "board_io.h"
-
+#include <avr/boot.h>
 
 uint8_t tentacles_pin[4] = {S0_tentacles_pin,
                             S1_tentacles_pin,
                             E1_tentacles_pin,
                             E2_tentacles_pin, };
+char serialDevice[UniqueIDsize+1] = "";
+
 void setup_bsp(void)
 {
     for( uint8_t pins = 0; pins < 4; pins++) {
@@ -12,6 +14,14 @@ void setup_bsp(void)
     }
     pinMode(EZO_RX_PIN, INPUT_PULLUP);
     pinMode(EZO_TX_PIN, OUTPUT);
+
+    for (uint8_t i = 0; i < UniqueIDsize; i++)
+    {
+        serialDevice[i] = boot_signature_byte_get(0x0E + i + (UniqueIDsize == 9 && i > 5 ? 1 : 0));
+        serialDevice[i] += UniqueIDsize - 8;
+    }
+    serialDevice[UniqueIDsize]='\0';
+
 }
 
 void tentacles_open_channel(uint8_t ch)

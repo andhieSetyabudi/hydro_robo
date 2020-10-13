@@ -35,7 +35,7 @@ void setup() {
 
   xTaskCreate(TaskSerial,
               "Serial",
-              128,
+              2048,
               NULL,
               1,
               NULL);
@@ -43,7 +43,8 @@ void setup() {
 }
 
 void loop() {
-  // vTaskDelay(500);
+  // uint32_t time_ = 60*15*1000;
+  // vTaskDelay(1000 / portTICK_PERIOD_MS);
   // put your main code here, to run repeatedly:
 //   set_sleep_mode(SLEEP_MODE_IDLE);
 
@@ -120,7 +121,7 @@ void TaskSerial(void *pvParameters)
  */
 void TaskBlink(void *pvParameters)
 {
-  // (void)pvParameters;
+  (void)pvParameters;
   pinMode(LED_BUILTIN, OUTPUT);
   Sensor::attachDelayCallback(system_halt);
   Sensor::water::initSensorBoard();
@@ -136,12 +137,8 @@ void TaskBlink(void *pvParameters)
       Sensor::water::app();
       time_reading = millis();
     }
-    
-
-    digitalWrite(LED_BUILTIN, HIGH);
-    vTaskDelay(250 / portTICK_PERIOD_MS);
-    digitalWrite(LED_BUILTIN, LOW);
-    vTaskDelay(250 / portTICK_PERIOD_MS);
+    vTaskDelay(50 / portTICK_PERIOD_MS);
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   }
 }
 

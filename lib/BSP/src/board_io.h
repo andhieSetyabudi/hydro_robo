@@ -30,6 +30,17 @@
 
 #define SERIAL_BAUD         115200
 
+#define UniqueIDsize        9
+
+struct timedateParam{
+    uint8_t date, month, year;
+};
+struct deviceParam{
+
+};
+
+extern char serialDevice[UniqueIDsize+1];
+
 void setup_bsp(void);
 
 void tentacles_open_channel(uint8_t ch);
