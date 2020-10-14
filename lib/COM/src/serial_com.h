@@ -17,6 +17,8 @@ typedef struct serial_keyword{
     const char* read_dissolved_oxygen_mgl;
     const char* read_dissolved_oxygen_percent;
     const char* read_water_temperature;
+    const char* read_elevation;
+    const char* read_air_pressure;
     const char* read_calibration_file;
 
 // write command

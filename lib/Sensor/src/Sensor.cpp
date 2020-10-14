@@ -1,11 +1,16 @@
 #include "Sensor.h"
-
+#include "board_io.h"
 
 Sens_val Sensor::sens = {0};
 bool Sensor::systemSleep = true;
 
 uint32_t (*Sensor::getTick)(void) = NULL;
 void (*Sensor::halt)(uint32_t t) = NULL;
+
+StabilityDetector Sensor::pH_stable_;
+StabilityDetector Sensor::DO_stable_;
+StabilityDetector Sensor::EC_stable_;
+StabilityDetector Sensor::water_temp_stable_;
 
 void Sensor::clearAllSensor(void){
     sens = ( Sens_val ) {
@@ -19,11 +24,22 @@ void Sensor::clearAllSensor(void){
         .specificOfGravity = 0,
         .DO2_mgl        = 0,
         .DO2_percent    = 0,
+        .airPressure_in_kpa = 0,
     };
+
+    pH_stable_.resetValue();
+    DO_stable_.resetValue();
+    EC_stable_.resetValue();
+    water_temp_stable_.resetValue();
 }
 
 void Sensor::setup(void){
     clearAllSensor();
+    // set precision 
+    pH_stable_.setPrecision(deviceParameter.pH_precision);
+    DO_stable_.setPrecision(deviceParameter.DO_precision);
+    EC_stable_.setPrecision(deviceParameter.EC_precision);
+    water_temp_stable_.setPrecision(deviceParameter.water_temperature_precision);
     // default is sleep
     systemSleep = true;
 }

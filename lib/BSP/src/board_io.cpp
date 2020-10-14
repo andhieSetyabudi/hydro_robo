@@ -1,11 +1,27 @@
 #include "board_io.h"
 #include <avr/boot.h>
 
+
 uint8_t tentacles_pin[4] = {S0_tentacles_pin,
                             S1_tentacles_pin,
                             E1_tentacles_pin,
                             E2_tentacles_pin, };
 char serialDevice[UniqueIDsize+1] = "";
+
+deviceParam deviceParameter = {0};
+
+void reset_device_parameter(void)
+{
+    deviceParameter.elevation  = 5.0f;
+    deviceParameter.pH_calibration_parameter = (calibrationParam){.slope = 1, .offset = 0};
+    deviceParameter.DO_calibration_parameter = (calibrationParam){.slope = 1, .offset = 0};
+    deviceParameter.EC_calibration_parameter = (calibrationParam){.slope = 1, .offset = 0};
+
+    deviceParameter.pH_precision = 0.05f;   // pH value, stdev
+    deviceParameter.DO_precision = 0.05f;   // mgl, stdev
+    deviceParameter.EC_precision = 100.f;   // uS/cm, stdev
+    deviceParameter.water_temperature_precision = 0.025f;   // degree celcius, stdev
+}
 
 void setup_bsp(void)
 {

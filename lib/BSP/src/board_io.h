@@ -32,15 +32,35 @@
 
 #define UniqueIDsize        9
 
-struct timedateParam{
+struct timeDateParam{
     uint8_t date, month, year;
+};
+struct calibrationParam{
+    float slope, offset;
 };
 struct deviceParam{
 
+    float elevation;
+
+    timeDateParam pH_timedate_calibration;
+    timeDateParam DO_timedate_calibration;
+    timeDateParam EC_timedate_calibration;
+
+    calibrationParam pH_calibration_parameter;
+    calibrationParam DO_calibration_parameter;
+    calibrationParam EC_calibration_parameter;
+
+    float pH_precision,
+          DO_precision,
+          EC_precision,
+          water_temperature_precision;
 };
+
+extern deviceParam deviceParameter;
 
 extern char serialDevice[UniqueIDsize+1];
 
+void reset_device_parameter(void);
 void setup_bsp(void);
 
 void tentacles_open_channel(uint8_t ch);

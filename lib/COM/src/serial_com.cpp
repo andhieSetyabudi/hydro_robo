@@ -19,6 +19,8 @@ const serial_key key_cmd PROGMEM = {
     .read_dissolved_oxygen_mgl = "get_DO_mgl",
     .read_dissolved_oxygen_percent = "get_DO_%",
     .read_water_temperature        = "get_water_temp",
+    .read_elevation                = "get_elevation",
+    .read_air_pressure             = "get_air_pressure",
     .read_calibration_file         = "get_cal_file",
 
 
@@ -143,26 +145,55 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
     
     // for parameter sensor_reading
     bool read_all_param = plain.equals((const char *)pgm_read_word(&(key_cmd.read_all)));
-    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_pH))) || read_all_param )
-        json_buffer[F("pH")] = Sensor::getpH();
-    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_conductivity))) || read_all_param)
-        json_buffer[F("conductivity")] = Sensor::getConductivity();
+    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_pH))) || read_all_param ) {
+        json_buffer.createNestedObject(F("pH"));
+        json_buffer[F("pH")]["value"] = Sensor::getpH();
+        json_buffer[F("pH")][F("stdev")] = Sensor::getPH_stdev();
+        json_buffer[F("pH")][F("stable")] = Sensor::isPHStable();
+    }
+
+    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_conductivity))) || read_all_param) {
+        json_buffer.createNestedObject(F("conductivity"));
+        json_buffer[F("conductivity")][F("value")] = Sensor::getConductivity();
+        json_buffer[F("conductivity")][F("stdev")] = Sensor::getEC_stdev();
+        json_buffer[F("conductivity")][F("stable")] = Sensor::isConductivityStable();
+    }
+
     if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_salinity))) || read_all_param)
         json_buffer[F("salinity")] = Sensor::getSalinity();
+    
     if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_specific_of_gravity))) || read_all_param)
-        json_buffer[F("SoG")] = 1;
+        json_buffer[F("SoG")] = Sensor::getSpecifivGravity();
+    
     if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_tds))) || read_all_param)
-        json_buffer[F("TDS")] = 1;
+        json_buffer[F("TDS")] = Sensor::getTDS();
+    
     if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_dissolved_oxygen_percent))) || read_all_param)
-        json_buffer[F("DO_%")] = 10.0;
-    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_dissolved_oxygen_mgl))) || read_all_param)
-        json_buffer[F("DO_mgl")] = 10.0;
+        json_buffer[F("DO_%")] = Sensor::getDO_percent();
+    
+    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_dissolved_oxygen_mgl))) || read_all_param){
+        json_buffer.createNestedObject(F("DO_mgl"));
+        json_buffer[F("DO_mgl")][F("value")] = Sensor::getDO_mgl();
+        json_buffer[F("DO_mgl")][F("stdev")] = Sensor::getDO_stdev();
+        json_buffer[F("DO_mgl")][F("stable")] = Sensor::isDOStable();
+    }
+
     if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_water_temperature))) || read_all_param)
         json_buffer[F("Water Temp")] = Sensor::getWaterTemperature();
 
+    if ( plain.equals((const char *)pgm_read_word(&(key_cmd.read_elevation))) )
+        json_buffer[F("elevation")] = deviceParameter.elevation;
+
     if (plain.equals((const char *)pgm_read_word(&(key_cmd.get_sn))))
-        json_buffer[F("SN")] = serialDevice;
-    if (plain.equals((const char *)pgm_read_word(&(key_cmd.ping))))
+    {
+        String buf_sn="";
+        for (uint8_t l = 0; l < UniqueIDsize; l++){
+            buf_sn += String(serialDevice[l],HEX);
+        }
+        json_buffer[F("SN")] = buf_sn;
+    }
+
+    else if (plain.equals((const char *)pgm_read_word(&(key_cmd.ping))))
         json_buffer[F("response")] = F("ok");
     else
         json_buffer[F("response")] = plain + F(" unknown command");

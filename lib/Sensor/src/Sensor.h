@@ -8,6 +8,7 @@
 #include "string.h"
 #include "math.h"
 
+#include "extra/stabilityDetector/StabilityDetector.h"
 #include <Ezo_uart.h>
 
 #ifndef TENTACLES_CH_NUM
@@ -40,7 +41,8 @@ struct Sens_val{
             tds,
             specificOfGravity,
             DO2_mgl,
-            DO2_percent;
+            DO2_percent,
+            airPressure_in_kpa;
 };
 
 class Sensor{
@@ -48,6 +50,12 @@ class Sensor{
         static bool systemSleep;
 
         static Sens_val sens;
+        // stability detector
+        static StabilityDetector pH_stable_;
+        static StabilityDetector DO_stable_;
+        static StabilityDetector EC_stable_;
+        static StabilityDetector water_temp_stable_;
+
         static void clearAllSensor(void);
         static uint32_t (*getTick)(void);
         static void (*halt)  (uint32_t t);
@@ -61,10 +69,27 @@ class Sensor{
         static void setSleep(bool sleep);
         static bool isSleep(void);
 
+        static float getAirPressure(void)       { return sens.airPressure_in_kpa;}
         static float getWaterTemperature(void)  { return sens.water_temperature;}
+        static bool  isWaterTempStable(void)    { return water_temp_stable_.isStable();}
+        static float getWaterTemp_stdev(void)   { return water_temp_stable_.getDeviasionValue();}
+
         static float getpH(void)                { return sens.pH;}
+        static bool  isPHStable(void)           { return pH_stable_.isStable();}
+        static float getPH_stdev(void)          { return pH_stable_.getDeviasionValue();}
+
         static float getConductivity(void)      { return sens.conductivity;}
         static float getSalinity(void)          { return sens.salinity;}
+        static float getSpecifivGravity(void)   { return sens.specificOfGravity;}
+        static float getTDS(void)               { return sens.tds;}
+        static bool  isConductivityStable(void) { return EC_stable_.isStable();}
+        static float getEC_stdev(void)          { return EC_stable_.getDeviasionValue();}
+
+        static float getDO_percent(void)        { return sens.DO2_percent;}
+        static float getDO_mgl(void)            { return sens.DO2_mgl;}
+        static bool  isDOStable(void)           { return DO_stable_.isStable();}
+        static float getDO_stdev(void)          { return DO_stable_.getDeviasionValue();}
+
     // sub-class 
         class water;
         class air;

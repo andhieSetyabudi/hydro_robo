@@ -57,17 +57,35 @@ void Sensor::water::initSensorBoard(void)
                     ezo_Module.send_cmd("C,0", NULL, 0); //send the command to turn off continuous mode
                                                          //in this case we arent concerned about waiting for the reply
                     waterDelay(100);
-                    ezo_Module.send_cmd("*OK,0", NULL, 0);
+                    ezo_Module.send_cmd("*OK,0", NULL, 0);  // turn of "OK" reply
                     if ( key == 2 ) // specialy case for EC
                     {
                         ezo_Module.send_cmd("K,1", NULL, 0);
                     }
                     else if ( key == 1 ) // specialy case for DO
                     {
+                        // turn off mgl value, only take percent value
                         ezo_Module.send_cmd("O,mg,0", NULL, 0);
                         waterDelay(10);
                         ezo_Module.send_cmd("O,%,1", NULL, 0);
                     }
+                    // clear calibration data except RTD module
+                    if (key < ( NUM_OF_EZO - 1 )) // NUM_OF_EZO - 1 meaning last index is RTD sensor
+                    {
+                        sprintf_P(buf_msg, (const char *)F(""));
+                        if ( ezo_Module.send_cmd("Cal,?", buf_msg, 19) ){
+                            if (strcmp(buf_msg, "*ER") != 0)    // no response error
+                            {
+                                Serial.println("response calibration: "+String(buf_msg));
+                                *buf_msg += strlen_P((const char*)F("?Cal,"));
+                                if ( atoi(buf_msg) != 0) // need to reset cal
+                                    ezo_Module.send_cmd("Cal,clear", NULL, 0);
+                                Serial.println("calibration status : "+String(atoi(buf_msg)));
+                            };
+                        };
+                    }
+                        
+
                     break; // quit from loop
                 };
             };
@@ -80,21 +98,51 @@ void Sensor::water::initSensorBoard(void)
 
 void Sensor::water::loadParamSensor(const char *sens)
 {
+    float floating_buffer = 0;
     ezo_Module.flush_rx_buffer();
     if( !ezo_Module.send_read() )
         return;
     if (strstr((const char *)sens, boardKey[0]) != NULL) {    // pH
-        Sensor::sens.pH = ezo_Module.get_reading();
+        floating_buffer = ezo_Module.get_reading();
+        Sensor::sens.pH = deviceParameter.pH_calibration_parameter.slope * floating_buffer + 
+                            deviceParameter.pH_calibration_parameter.offset;
+
+        // pH is compensated by temperature
+        float compenFactor = 0;
+        float tmp_temp = (getWaterTemperature() > 60.0f) ? 60.0f : getWaterTemperature();
+        compenFactor = ((25.f + 273.15f) / (tmp_temp + 273.15f));
+        compenFactor = isnan(compenFactor) ? 1 : (compenFactor < 0) ? 0.001 : compenFactor;
+        Sensor::sens.pH = 7.01f + ((Sensor::sens.pH - 7.01f) * compenFactor);
+        // limitation of value ( range 0 - 14 )
+        Sensor::sens.pH = (Sensor::sens.pH < 0.f) ? 0.00f : (Sensor::sens.pH > 14.0f) ? 14.0f : Sensor::sens.pH;
+        
+        Sensor::pH_stable_.pushToBuffer(getpH()); // update stability detector data series
     }
     else if (strstr((const char *)sens, boardKey[1]) != NULL) { // DO
-        Sensor::sens.DO2_percent = ezo_Module.get_reading();
+        floating_buffer = ezo_Module.get_reading();
+        Sensor::sens.DO2_percent = deviceParameter.DO_calibration_parameter.slope * floating_buffer + 
+                                    deviceParameter.DO_calibration_parameter.offset;
+        floating_buffer = saturationDOvalue( getWaterTemperature(), getAirPressure(), getConductivity() );
+
+        Sensor::DO_stable_.pushToBuffer(getDO_mgl()); // update stability detector data series
     }
     else if (strstr((const char *)sens, boardKey[2]) != NULL) { // EC
-        Sensor::sens.conductivity = ezo_Module.get_reading();
-        Sensor::sens.salinity = condToSal(Sensor::sens.conductivity, Sensor::sens.water_temperature);
+        floating_buffer = ezo_Module.get_reading();
+        floating_buffer = deviceParameter.EC_calibration_parameter.slope * floating_buffer +
+                          deviceParameter.EC_calibration_parameter.offset;
+        Sensor::sens.conductivity = conductivityTempCompensation( floating_buffer, getWaterTemperature() );
+        Sensor::sens.salinity = condToSal(getConductivity(), getWaterTemperature());
+
+        Sensor::sens.specificOfGravity  = density_salt_water(getSalinity(), getWaterTemperature(), getAirPressure()*1000.f);
+        Sensor::sens.specificOfGravity /= density_salt_water(0.00f, getWaterTemperature(), getAirPressure()*1000.f);
+
+        Sensor::EC_stable_.pushToBuffer(getConductivity());       // update stability detector data series
     }
     else if (strstr((const char *)sens, boardKey[3]) != NULL) { // RTD
         Sensor::sens.water_temperature = ezo_Module.get_reading();
+        Sensor::sens.airPressure_in_kpa = getPressureFrom(Sensor::sens.water_temperature, deviceParameter.elevation);
+
+        Sensor::water_temp_stable_.pushToBuffer(getWaterTemperature()); // update stability detector data series
     }
 }
 
