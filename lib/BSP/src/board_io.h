@@ -5,6 +5,8 @@
 #include "Arduino.h"
 #include "Arduino_FreeRTOS.h"
 #include "SoftwareSerial.h"
+#include "EEPROM.h"
+#include "CRC32.h"
 
 #ifndef ENABLE
     #define ENABLE  HIGH
@@ -56,6 +58,8 @@ struct deviceParam{
           water_temperature_precision;
 };
 
+const char boardKey[][4] = {"pH", "DO", "EC", "RTD"};
+
 extern deviceParam deviceParameter;
 
 extern char serialDevice[UniqueIDsize+1];
@@ -64,6 +68,16 @@ void reset_device_parameter(void);
 void setup_bsp(void);
 
 void tentacles_open_channel(uint8_t ch);
+
+
+//=========== eeprom buffer
+#define EEPROM_START_ADDR   1
+
+
+bool initializeMemory(void);
+bool backUpMemory(void);
+bool resetMemory(void);
+
 
 
 #endif

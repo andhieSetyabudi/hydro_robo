@@ -2,7 +2,7 @@
 #include "Sensor.h"
 #include "extra/equation.h"
 
-const char boardKey[][4] = {"pH", "DO", "EC", "RTD"};
+
 
 SoftwareSerial ezoSerial(EZO_RX_PIN, EZO_TX_PIN);
     // initialize variable, system requirement. Sometime error occur by compiler
@@ -61,6 +61,14 @@ void Sensor::water::initSensorBoard(void)
                     if ( key == 2 ) // specialy case for EC
                     {
                         ezo_Module.send_cmd("K,1", NULL, 0);
+                        waterDelay(10);
+                        ezo_Module.send_cmd(F("O,EC,1"), NULL, 0);
+                        waterDelay(10);
+                        ezo_Module.send_cmd(F("O,TDS,0"), NULL, 0);
+                        waterDelay(10);
+                        ezo_Module.send_cmd(F("O,S,0"), NULL, 0);
+                        waterDelay(10);
+                        ezo_Module.send_cmd(F("O,SG,0"), NULL, 0);
                     }
                     else if ( key == 1 ) // specialy case for DO
                     {
@@ -76,11 +84,11 @@ void Sensor::water::initSensorBoard(void)
                         if ( ezo_Module.send_cmd("Cal,?", buf_msg, 19) ){
                             if (strcmp(buf_msg, "*ER") != 0)    // no response error
                             {
-                                Serial.println("response calibration: "+String(buf_msg));
+                                // Serial.println("response calibration: "+String(buf_msg));
                                 *buf_msg += strlen_P((const char*)F("?Cal,"));
                                 if ( atoi(buf_msg) != 0) // need to reset cal
                                     ezo_Module.send_cmd("Cal,clear", NULL, 0);
-                                Serial.println("calibration status : "+String(atoi(buf_msg)));
+                                // Serial.println("calibration status : "+String(atoi(buf_msg)));
                             };
                         };
                     }
@@ -123,14 +131,16 @@ void Sensor::water::loadParamSensor(const char *sens)
         Sensor::sens.DO2_percent = deviceParameter.DO_calibration_parameter.slope * floating_buffer + 
                                     deviceParameter.DO_calibration_parameter.offset;
         floating_buffer = saturationDOvalue( getWaterTemperature(), getAirPressure(), getConductivity() );
-
+        Sensor::sens.DO2_mgl = floating_buffer * getDO_percent();
         Sensor::DO_stable_.pushToBuffer(getDO_mgl()); // update stability detector data series
     }
     else if (strstr((const char *)sens, boardKey[2]) != NULL) { // EC
         floating_buffer = ezo_Module.get_reading();
         floating_buffer = deviceParameter.EC_calibration_parameter.slope * floating_buffer +
                           deviceParameter.EC_calibration_parameter.offset;
-        Sensor::sens.conductivity = conductivityTempCompensation( floating_buffer, getWaterTemperature() );
+        float temp_compen = getWaterTemperature() > 60 ? 60 : (getWaterTemperature() < 0) ? 0 : getWaterTemperature();
+        Sensor::sens.conductivity = conductivityTempCompensation(floating_buffer, temp_compen);
+        // Sensor::sens.conductivity = floating_buffer;
         Sensor::sens.salinity = condToSal(getConductivity(), getWaterTemperature());
 
         Sensor::sens.specificOfGravity  = density_salt_water(getSalinity(), getWaterTemperature(), getAirPressure()*1000.f);
@@ -166,7 +176,7 @@ void Sensor::water::app(void)
         ch_index = 0;
     }
     tentacles_open_channel(moduleInfo[ch_index].ch);
-    waterDelay(100);
+    waterDelay(10);
     loadParamSensor(moduleInfo[ch_index].name);
     
     // set temperature compensation

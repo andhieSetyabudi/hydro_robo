@@ -106,5 +106,31 @@ static inline float saturationDOvalue( float tempInC, float pressureInkPa, float
     return DO;
 }
 
+static inline float getSum(const float *series, int size_)
+{
+    float sum = 0;
+    int i;
+    for (i = 0; i < size_; i++)
+    {
+        sum += series[i];
+    }
+    return sum;
+}
 
+static inline void RegresionLinear(float *x, float *y, int point, float *slope, float *intercept)
+{
+    float O, S;
+    float zY = getSum(y, point);
+    float zX = getSum(x, point);
+    float zXY = 0, zX2 = 0;
+    for (int i = 0; i < point; i++)
+    {
+        zXY += x[i] * y[i];
+        zX2 += pow(x[i], 2);
+    };
+    S = (2 * zXY - zY * zX) / (2 * zX2 - pow(zX, 2));
+    O = (zY * zX2 - zX * zXY) / (2 * zX2 - pow(zX, 2));
+    *slope = S;
+    *intercept = O;
+}
 #endif

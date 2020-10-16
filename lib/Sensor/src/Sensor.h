@@ -43,6 +43,10 @@ struct Sens_val{
             DO2_mgl,
             DO2_percent,
             airPressure_in_kpa;
+    // uncalibrated value
+    float pH_uncal,
+          ec_uncal,
+          do_percent_uncal;
 };
 
 class Sensor{
@@ -55,6 +59,10 @@ class Sensor{
         static StabilityDetector DO_stable_;
         static StabilityDetector EC_stable_;
         static StabilityDetector water_temp_stable_;
+
+        static StabilityDetector pH_uncal_stable;
+        static StabilityDetector ec_uncal_stable;
+        static StabilityDetector do_uncal_stable;
 
         static void clearAllSensor(void);
         static uint32_t (*getTick)(void);
@@ -89,6 +97,18 @@ class Sensor{
         static float getDO_mgl(void)            { return sens.DO2_mgl;}
         static bool  isDOStable(void)           { return DO_stable_.isStable();}
         static float getDO_stdev(void)          { return DO_stable_.getDeviasionValue();}
+
+
+    // uncalibrate_param
+        // pH
+        static float getPH_uncal(void)              { return sens.pH_uncal;}
+        static float getPH_uncal_stdev(void)        { return pH_uncal_stable.getDeviasionValue();}
+        static float getPH_uncal_stableCount(void)  { return pH_uncal_stable.getStableCount();}
+        static bool isPH_uncal_stable(void)         { return pH_uncal_stable.isStable();}
+        // DO
+        static float getDO_percent_uncal(void)      { return sens.do_percent_uncal;}
+        static float getDO_uncal_stdev(void)        { return do_uncal_stable.getDeviasionValue();}
+        
 
     // sub-class 
         class water;

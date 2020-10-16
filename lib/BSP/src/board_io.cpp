@@ -1,7 +1,7 @@
 #include "board_io.h"
 #include <avr/boot.h>
 
-
+// const char boardKey[4][4] = {"pH", "DO", "EC", "RTD"};
 uint8_t tentacles_pin[4] = {S0_tentacles_pin,
                             S1_tentacles_pin,
                             E1_tentacles_pin,
@@ -60,3 +60,45 @@ void tentacles_open_channel(uint8_t ch)
 
     };
 }
+
+bool initializeMemory(void)
+{
+    uint32_t len = sizeof(deviceParam);
+    CRC32 crc_;
+    uint32_t checksum_count, checksum_stored = 0;
+    crc_.reset();
+    EEPROM.get(EEPROM_START_ADDR, deviceParameter);
+    checksum_count = crc_.calculate((byte*)&deviceParameter, len);
+    EEPROM.get(EEPROM_START_ADDR+len, checksum_stored);
+    Serial.println(" checksum count : 0x" + (String(checksum_count, HEX) +
+                                             "\t checksum stored : 0x" + String(checksum_stored, HEX)));
+    if ( checksum_count == checksum_stored )
+        return true;
+    else
+        return false;
+}
+
+bool backUpMemory(void)
+{
+    uint32_t len = sizeof(deviceParam);
+    CRC32 crc_;
+    uint32_t checksum_count, checksum_stored = 0;
+    crc_.reset();
+    EEPROM.put(EEPROM_START_ADDR, deviceParameter);
+    checksum_count = crc_.calculate((byte *)&deviceParameter, len);
+    EEPROM.put(EEPROM_START_ADDR + len, checksum_count);
+    EEPROM.get(EEPROM_START_ADDR + len, checksum_stored);
+    Serial.println( " checksum count : 0x"+(String(checksum_count,HEX) + 
+                    "\t checksum stored : 0x"+String(checksum_stored, HEX)));
+    if (checksum_count == checksum_stored)
+        return true;
+    else
+        return false;
+}
+
+bool resetMemory()
+{
+    reset_device_parameter();
+    return backUpMemory();
+}
+

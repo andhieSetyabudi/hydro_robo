@@ -7,8 +7,12 @@
 typedef struct serial_keyword{
     const char *ping;
     const char *get_sn;
+    const char *restart;
 // read command
-    const char *read_all;
+    const char* read_pH_uncalibrated;
+    const char* read_ec_uncalibrated;
+    const char* read_do_uncalibrated;
+    const char* read_all;
     const char* read_pH;
     const char* read_conductivity;
     const char* read_salinity;
@@ -31,6 +35,7 @@ extern const serial_key key_cmd PROGMEM;
 
 class serial_com{
     private:
+        static bool reset_by_cmd;
         static void (*halt)(uint32_t t);
         static void serial_halt(uint32_t t);
         static void parsingByKeyword(const String &plain, String &json_str);

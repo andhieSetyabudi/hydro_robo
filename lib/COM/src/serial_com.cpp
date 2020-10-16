@@ -2,35 +2,46 @@
 #include "serial_com.h"
 #include "board_io.h"
 #include "Sensor.h"
+#include "extra\equation.h"
 
 #include "ArduinoJson.h"
 
-#define command_key F("cmd")
+#define command_key     F("cmd")
+#define calibration_key F("cal")
+#define cal_reference   F("sp")
+#define cal_currVal     F("cp")
 
+void (*resetFunc)(void) = 0;
+StaticJsonDocument<500> json_buffer;
 const serial_key key_cmd PROGMEM = {
-    .ping               = "ping",
-    .get_sn             = "get_sn",
-    .read_all           = "get_all",
-    .read_pH            = "get_ph",
-    .read_conductivity  = "get_ec",
-    .read_salinity      = "get_sal",
-    .read_tds           = "get_tds",
-    .read_specific_of_gravity = "get_sog",
-    .read_dissolved_oxygen_mgl = "get_DO_mgl",
-    .read_dissolved_oxygen_percent = "get_DO_%",
-    .read_water_temperature        = "get_water_temp",
-    .read_elevation                = "get_elevation",
-    .read_air_pressure             = "get_air_pressure",
-    .read_calibration_file         = "get_cal_file",
 
+    .ping       = "ping",
+    .get_sn     = "get_sn",
+    .restart    = "restart" ,
+
+    .read_pH_uncalibrated = "get_pH_uncal",
+    .read_ec_uncalibrated = "get_ec_uncal",
+    .read_do_uncalibrated = "get_do_uncal",
+
+    .read_all = "get_all",
+    .read_pH = "get_ph",
+    .read_conductivity = "get_ec",
+    .read_salinity = "get_sal",
+    .read_tds = "get_tds",
+    .read_specific_of_gravity = "get_sog",
+    .read_dissolved_oxygen_mgl = "get_do_mgl",
+    .read_dissolved_oxygen_percent = "get_do_%",
+    .read_water_temperature = "get_water_temp",
+    .read_elevation = "get_elevation",
+    .read_air_pressure = "get_air_pressure",
+    .read_calibration_file = "get_cal_file",
 
 };
-
 
 String serial_com::serialBuffer = "";
 bool serial_com::serialFlag     = false;
 void (*serial_com::halt)(uint32_t t) = NULL;
-
+bool serial_com::reset_by_cmd   = false;
 void serialEvent()
 {
     while ( Serial.available() )
@@ -44,8 +55,8 @@ void serialEvent()
         if ( inChar == '\n' )
         {
             // take the last string value
-            uint16_t lastPos = serial_com::serialBuffer.length();
-            char lastBuffer = serial_com::serialBuffer.charAt(lastPos);
+            // uint16_t lastPos = serial_com::serialBuffer.length();
+            // char lastBuffer = serial_com::serialBuffer.charAt(lastPos);
             // if( lastBuffer == '\r' )
                 serial_com::serialFlag = true;
         }
@@ -84,9 +95,15 @@ void serial_com::app()
         parser();
         serialFlag = false;
         serialBuffer = "";
+        if (reset_by_cmd)
+        {
+            Serial.println(F("Restart module by CMD !"));
+            resetFunc();
+        }
     }
 }
 
+#define MAX_CAL_REF_NUM     5
 void serial_com::parser(void)
 {
     StaticJsonDocument<368> parserDoc;
@@ -125,11 +142,101 @@ void serial_com::parser(void)
             cmd_ = json_obj[command_key].as<String>();
             parsingByKeyword(cmd_, json_string);
         }
-        Serial.println(json_string);
+        
     }
+    else if (json_obj.containsKey(calibration_key) )
+    {
+        JsonObject sub_obj = json_obj[calibration_key].as<JsonObject>();
+        float ref[MAX_CAL_REF_NUM], cur[MAX_CAL_REF_NUM];
+        uint8_t len = 0;
+        if (!sub_obj.containsKey(cal_reference) && !!sub_obj.containsKey(cal_currVal))
+        {
+            json_buffer.clear();
+            DeserializationError error = deserializeJson(json_buffer, json_string);
+            if (error)
+                json_buffer.clear();
+            json_buffer[calibration_key] = "no reference value";
+            serializeJson(json_buffer, json_string);
+            json_buffer.clear();
+        }
+        else
+        {
+            // load variable for calibration
+            // set point as reference
+            JsonArray sp_arr = sub_obj[cal_reference].as<JsonArray>();
+            len = sp_arr.size() >= MAX_CAL_REF_NUM ? MAX_CAL_REF_NUM : sp_arr.size();
+            if (len > 0)
+            {
+                for ( uint8_t idc = 0; idc < len; idc++)
+                {
+                    ref[idc] = sub_obj[cal_reference][idc].as<float>();
+                }
+            }
+            else
+            {
+                ref[0] = sub_obj[cal_reference].as<float>();
+            }
+
+            // current reading as value to be setted
+            JsonArray cp_arr = sub_obj[cal_currVal].as<JsonArray>();
+            len = min ( cp_arr.size(), len );
+            if (len > 0)
+            {
+                for (uint8_t idc = 0; idc < len; idc++)
+                {
+                    cur[idc] = sub_obj[cal_currVal][idc].as<float>();
+                }
+            }
+            else
+            {
+                cur[0] = sub_obj[cal_currVal].as<float>();
+            }
+            //============================================================
+
+            if (sub_obj.containsKey(F("type")))
+            {
+                String sens_type = sub_obj[F("type")].as<String>();
+                sens_type.trim();
+                sens_type.toLowerCase();
+                Serial.println("kalibrasi : " + sens_type);
+                if (sens_type.equals(F("ph"))) // pH
+                {
+                    if ( len > 1)
+                        RegresionLinear(cur, ref, len, &deviceParameter.pH_calibration_parameter.slope, &deviceParameter.pH_calibration_parameter.offset);
+                    else
+                    {
+                        deviceParameter.pH_calibration_parameter.slope = ref[len] / cur [len]; 
+                        deviceParameter.pH_calibration_parameter.offset = 0;
+                    }
+                    if (isnan(deviceParameter.pH_calibration_parameter.slope)) deviceParameter.pH_calibration_parameter.slope = 1;
+                    if (isnan(deviceParameter.pH_calibration_parameter.offset)) deviceParameter.pH_calibration_parameter.offset = 0;
+                    Serial.println(" pH slope : " + String(deviceParameter.pH_calibration_parameter.slope) + "\toffset" + String(deviceParameter.pH_calibration_parameter.offset));
+                }
+                else if (sens_type.equals(boardKey[1])) // DO
+                { 
+
+                }
+                else if (sens_type.equals(boardKey[2])) // EC
+                {
+
+                }
+                else
+                {
+                    json_buffer.clear();
+                    DeserializationError error = deserializeJson(json_buffer, json_string);
+                    if (error)
+                        json_buffer.clear();
+                    json_buffer[calibration_key] = "unknown sensor";
+                    serializeJson(json_buffer, json_string);
+                    json_buffer.clear();
+                }
+            }
+        };
+    }
+    Serial.println(json_string);
 }
 
-StaticJsonDocument<500> json_buffer;
+
 void serial_com::parsingByKeyword(const String &plain, String &json_str)
 {
     json_buffer.clear();
@@ -184,6 +291,21 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
     if ( plain.equals((const char *)pgm_read_word(&(key_cmd.read_elevation))) )
         json_buffer[F("elevation")] = deviceParameter.elevation;
 
+    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_calibration_file))))
+    {
+        json_buffer.createNestedObject(F("Cal"));
+        json_buffer[F("Cal")].createNestedObject(F("pH"));
+        json_buffer[F("Cal")][F("pH")][F("gain")] = deviceParameter.pH_calibration_parameter.slope;
+        json_buffer[F("Cal")][F("pH")][F("offset")] = deviceParameter.pH_calibration_parameter.offset;
+
+        json_buffer[F("Cal")].createNestedObject(F("DO"));
+        json_buffer[F("Cal")][F("DO")][F("gain")] = deviceParameter.DO_calibration_parameter.slope;
+        json_buffer[F("Cal")][F("DO")][F("offset")] = deviceParameter.DO_calibration_parameter.offset;
+
+        json_buffer[F("Cal")].createNestedObject(F("EC"));
+        json_buffer[F("Cal")][F("EC")][F("gain")] = deviceParameter.EC_calibration_parameter.slope;
+        json_buffer[F("Cal")][F("EC")][F("offset")] = deviceParameter.EC_calibration_parameter.offset;
+    }
     if (plain.equals((const char *)pgm_read_word(&(key_cmd.get_sn))))
     {
         String buf_sn="";
@@ -196,7 +318,11 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
     else if (plain.equals((const char *)pgm_read_word(&(key_cmd.ping))))
         json_buffer[F("response")] = F("ok");
     else
-        json_buffer[F("response")] = plain + F(" unknown command");
+    {
+        if ( json_buffer.isNull() )
+            json_buffer[F("response")] = plain + F(" unknown command");
+    }
+        
     json_str = "";
     serializeJson(json_buffer, json_str);
     json_buffer.clear();

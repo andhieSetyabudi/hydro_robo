@@ -23,6 +23,11 @@ void setup() {
   setup_bsp();
   serial_com::setHalt(system_halt);
   serial_com::setup();
+
+  if ( !initializeMemory() )
+    resetMemory();
+  else 
+    Serial.println("load memory success");
   /**
    * Task creation
    */
@@ -131,9 +136,8 @@ void TaskBlink(void *pvParameters)
   for (;;)
   {
     // Serial.println("reading sensor");
-    if ( millis() - time_reading >= 500 )
+    if ( millis() - time_reading >= 200 )
     {
-      // Serial.println("reading sensor");
       Sensor::water::app();
       time_reading = millis();
     }

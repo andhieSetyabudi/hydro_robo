@@ -12,6 +12,10 @@ StabilityDetector Sensor::DO_stable_;
 StabilityDetector Sensor::EC_stable_;
 StabilityDetector Sensor::water_temp_stable_;
 
+StabilityDetector Sensor::pH_uncal_stable;
+StabilityDetector Sensor::ec_uncal_stable;
+StabilityDetector Sensor::do_uncal_stable;
+
 void Sensor::clearAllSensor(void){
     sens = ( Sens_val ) {
         .water_temperature  = 0,
@@ -31,6 +35,10 @@ void Sensor::clearAllSensor(void){
     DO_stable_.resetValue();
     EC_stable_.resetValue();
     water_temp_stable_.resetValue();
+
+    pH_uncal_stable.resetValue();
+    ec_uncal_stable.resetValue();
+    do_uncal_stable.resetValue();
 }
 
 void Sensor::setup(void){
@@ -40,6 +48,11 @@ void Sensor::setup(void){
     DO_stable_.setPrecision(deviceParameter.DO_precision);
     EC_stable_.setPrecision(deviceParameter.EC_precision);
     water_temp_stable_.setPrecision(deviceParameter.water_temperature_precision);
+
+    pH_uncal_stable.setPrecision(deviceParameter.pH_precision);
+    ec_uncal_stable.setPrecision(deviceParameter.DO_precision);
+    do_uncal_stable.setPrecision(deviceParameter.EC_precision);
+
     // default is sleep
     systemSleep = true;
 }
@@ -67,7 +80,7 @@ void Sensor::waterParamInfo(void)
     Serial.println("Water parameter Information");
     Serial.println(" pH : " + String(sens.pH,2));
     Serial.println(" DO : " + String(sens.DO2_mgl, 2));
-    Serial.println(" EC : " + String(sens.conductivity, 2));
+    Serial.println(" EC : " + String(getConductivity(), 2));
     Serial.println(" Temp : " + String(sens.water_temperature, 2));
     Serial.flush();
 }
