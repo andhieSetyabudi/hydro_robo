@@ -112,19 +112,20 @@ void Sensor::water::loadParamSensor(const char *sens)
         return;
     if (strstr((const char *)sens, boardKey[0]) != NULL) {    // pH
         floating_buffer = ezo_Module.get_reading();
-        Sensor::sens.pH = deviceParameter.pH_calibration_parameter.slope * floating_buffer + 
-                            deviceParameter.pH_calibration_parameter.offset;
-
         // pH is compensated by temperature
         float compenFactor = 0;
         float tmp_temp = (getWaterTemperature() > 60.0f) ? 60.0f : getWaterTemperature();
         compenFactor = ((25.f + 273.15f) / (tmp_temp + 273.15f));
         compenFactor = isnan(compenFactor) ? 1 : (compenFactor < 0) ? 0.001 : compenFactor;
-        Sensor::sens.pH = 7.01f + ((Sensor::sens.pH - 7.01f) * compenFactor);
-        
+        Sensor::sens.pH_uncal = 7.01f + ((floating_buffer - 7.01f) * compenFactor);
+        Sensor::pH_uncal_stable.pushToBuffer(getPH_uncal());
+        // limitation of value ( range 0 - 14 ) => normalize
+        Sensor::sens.pH_uncal = (Sensor::sens.pH_uncal < 0.f) ? 0.00f : (Sensor::sens.pH_uncal > 14.0f) ? 14.0f : Sensor::sens.pH_uncal;
+
+        Sensor::sens.pH = deviceParameter.pH_calibration_parameter.slope * getPH_uncal() + 
+                            deviceParameter.pH_calibration_parameter.offset;
         // limitation of value ( range 0 - 14 ) => normalize
         Sensor::sens.pH = (Sensor::sens.pH < 0.f) ? 0.00f : (Sensor::sens.pH > 14.0f) ? 14.0f : Sensor::sens.pH;
-        
         Sensor::pH_stable_.pushToBuffer(getpH()); // update stability detector data series
     }
     else if (strstr((const char *)sens, boardKey[1]) != NULL) { // DO

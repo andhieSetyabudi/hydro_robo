@@ -61,7 +61,7 @@ void serialEvent_()
         if ( inChar == '\n' )
         {
             serial_com::serialFlag = true;
-            break;
+            // break;
         }
     }
 }
