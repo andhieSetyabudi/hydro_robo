@@ -70,8 +70,8 @@ bool initializeMemory(void)
     EEPROM.get(EEPROM_START_ADDR, deviceParameter);
     checksum_count = crc_.calculate((byte*)&deviceParameter, len);
     EEPROM.get(EEPROM_START_ADDR+len, checksum_stored);
-    Serial.println(" checksum count : 0x" + (String(checksum_count, HEX) +
-                                             "\t checksum stored : 0x" + String(checksum_stored, HEX)));
+    // Serial.println(" checksum count : 0x" + (String(checksum_count, HEX) +
+    //                                          "\t checksum stored : 0x" + String(checksum_stored, HEX)));
     if ( checksum_count == checksum_stored )
         return true;
     else
@@ -88,8 +88,8 @@ bool backUpMemory(void)
     checksum_count = crc_.calculate((byte *)&deviceParameter, len);
     EEPROM.put(EEPROM_START_ADDR + len, checksum_count);
     EEPROM.get(EEPROM_START_ADDR + len, checksum_stored);
-    Serial.println( " checksum count : 0x"+(String(checksum_count,HEX) + 
-                    "\t checksum stored : 0x"+String(checksum_stored, HEX)));
+    // Serial.println( " checksum count : 0x"+(String(checksum_count,HEX) + 
+    //                 "\t checksum stored : 0x"+String(checksum_stored, HEX)));
     if (checksum_count == checksum_stored)
         return true;
     else
@@ -99,6 +99,7 @@ bool backUpMemory(void)
 bool resetMemory()
 {
     reset_device_parameter();
+    Serial.println(F("Missing device parameter \r\n Reset to factory!"));
     return backUpMemory();
 }
 
