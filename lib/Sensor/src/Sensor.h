@@ -69,6 +69,7 @@ class Sensor{
         static void (*halt)  (uint32_t t);
         static void waterParamInfo(void);
     public:
+        static void initSensorPrecision(void);
         static void setup(void);
 
         static void attachGetTickCallback(uint32_t (*getTick)(void) );

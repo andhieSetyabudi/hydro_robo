@@ -145,6 +145,8 @@ void Sensor::water::loadParamSensor(const char *sens)
         
         float temp_compen = getWaterTemperature() > 60 ? 60 : (getWaterTemperature() < 0) ? 0 : getWaterTemperature();
         Sensor::sens.ec_uncal       = conductivityTempCompensation(floating_buffer, temp_compen);
+        Sensor::ec_uncal_stable.pushToBuffer(getEC_uncal());
+        
         Sensor::sens.conductivity = deviceParameter.EC_calibration_parameter.slope * getEC_uncal() +
                                     deviceParameter.EC_calibration_parameter.offset;
         //normalize
@@ -179,7 +181,7 @@ void Sensor::water::setup(void)
 void Sensor::water::app(void)
 {
     // if sensor need to sleep
-    // if ( Sensor::isSleep() ) return;
+    if ( Sensor::isSleep() ) return;
 
     if (ch_index >= NUM_OF_EZO ){
         sens_temp_comp = ~sens_temp_comp;
@@ -197,6 +199,6 @@ void Sensor::water::app(void)
     //     else
     //         ezo_Module.send_cmd("T,25.00", NULL, 0);
     // };
-    Sensor::waterParamInfo();
+    // Sensor::waterParamInfo();
     ch_index++;
 }

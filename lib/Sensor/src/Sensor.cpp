@@ -41,20 +41,25 @@ void Sensor::clearAllSensor(void){
     do_uncal_stable.resetValue();
 }
 
-void Sensor::setup(void){
-    clearAllSensor();
-    // set precision 
+void Sensor::initSensorPrecision(void)
+{
+    // set precision
     pH_stable_.setPrecision(deviceParameter.pH_precision);
     DO_stable_.setPrecision(deviceParameter.DO_precision);
     EC_stable_.setPrecision(deviceParameter.EC_precision);
     water_temp_stable_.setPrecision(deviceParameter.water_temperature_precision);
 
     pH_uncal_stable.setPrecision(deviceParameter.pH_precision);
-    ec_uncal_stable.setPrecision(deviceParameter.DO_precision);
-    do_uncal_stable.setPrecision(deviceParameter.EC_precision);
+    ec_uncal_stable.setPrecision(deviceParameter.EC_precision);
+    do_uncal_stable.setPrecision(deviceParameter.DO_precision);
+}
 
+void Sensor::setup(void){
+    clearAllSensor();
+
+    initSensorPrecision();    
     // default is sleep
-    systemSleep = true;
+    systemSleep = false;
 }
 
 void Sensor::setSleep(bool sleep){

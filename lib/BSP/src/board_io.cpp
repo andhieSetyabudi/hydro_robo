@@ -19,7 +19,7 @@ void reset_device_parameter(void)
 
     deviceParameter.pH_precision = 0.05f;   // pH value, stdev
     deviceParameter.DO_precision = 0.05f;   // mgl, stdev
-    deviceParameter.EC_precision = 100.f;   // uS/cm, stdev
+    deviceParameter.EC_precision = 50.00f;   // uS/cm, stdev
     deviceParameter.water_temperature_precision = 0.025f;   // degree celcius, stdev
 }
 
@@ -99,7 +99,6 @@ bool backUpMemory(void)
 bool resetMemory()
 {
     reset_device_parameter();
-    Serial.println(F("Missing device parameter \r\n Reset to factory!"));
     return backUpMemory();
 }
 

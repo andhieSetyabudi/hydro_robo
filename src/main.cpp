@@ -27,7 +27,11 @@ void setup() {
   serial_com::setup();
 
   if ( !initializeMemory() )
+  {
+    Serial.println(F("Missing device parameter \r\n Reset to factory!"));
     resetMemory();
+  }
+    
   else 
     Serial.println("load memory success");
   /**
@@ -131,6 +135,7 @@ void TaskBlink(void *pvParameters)
   (void)pvParameters;
   pinMode(LED_BUILTIN, OUTPUT);
   Sensor::attachDelayCallback(system_halt);
+  Sensor::setup();
   Sensor::water::initSensorBoard();
   unsigned long time_reading = millis();
   systemReady = true;
@@ -138,13 +143,13 @@ void TaskBlink(void *pvParameters)
   for (;;)
   {
     // Serial.println("reading sensor");
-    if ( millis() - time_reading >= 250 )
+    if ( millis() - time_reading >= 150 )
     {
       Sensor::water::app();
       time_reading = millis();
       taskYIELD();
     }
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    vTaskDelay(75 / portTICK_PERIOD_MS);
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   }
 }

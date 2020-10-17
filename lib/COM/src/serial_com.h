@@ -24,6 +24,7 @@ typedef struct serial_keyword{
     const char* read_elevation;
     const char* read_air_pressure;
     const char* read_calibration_file;
+    const char* reset_cal_file;
 
 // write command
     const char* write_calibration_file;

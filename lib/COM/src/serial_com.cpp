@@ -19,9 +19,9 @@ void (*resetFunc)(void) = 0;
 StaticJsonDocument<500> json_buffer;
 const serial_key key_cmd PROGMEM = {
 
-    .ping       = "ping",
-    .get_sn     = "get_sn",
-    .restart    = "restart",
+    .ping = "ping",
+    .get_sn = "get_sn",
+    .restart = "restart",
 
     .read_pH_uncalibrated = "get_pH_uncal",
     .read_ec_uncalibrated = "get_ec_uncal",
@@ -39,6 +39,7 @@ const serial_key key_cmd PROGMEM = {
     .read_elevation = "get_elevation",
     .read_air_pressure = "get_air_pressure",
     .read_calibration_file = "get_cal_file",
+    .reset_cal_file = "rst_cal_file",
 
 };
 
@@ -46,7 +47,7 @@ String serial_com::serialBuffer = "";
 bool serial_com::serialFlag     = false;
 void (*serial_com::halt)(uint32_t t) = NULL;
 bool serial_com::reset_by_cmd   = false;
-void serialEvent()
+void serialEvent_()
 {
     serial_com::serialBuffer = "";
     while ( Serial.available() )
@@ -59,13 +60,8 @@ void serialEvent()
         // do something about it:
         if ( inChar == '\n' )
         {
-                // take the last string value
-                // uint16_t lastPos = serial_com::serialBuffer.length();
-                // char lastBuffer = serial_com::serialBuffer.charAt(lastPos);
-                // if( lastBuffer == '\r' )
-                
-                serial_com::serialFlag = true;
-                break;
+            serial_com::serialFlag = true;
+            break;
         }
     }
 }
@@ -98,10 +94,8 @@ void serial_com::app()
 {
     if (serialFlag )
     {
-        // serialBuffer.trim();
-        // serialBuffer.toLowerCase();
-        // Serial.println(serialBuffer);
         Serial.flush();
+        //Serial.println(serialBuffer);
         parser();
         serialFlag = false;
         serialBuffer = "";
@@ -114,7 +108,7 @@ void serial_com::app()
         }
     }
     if ( Serial.available())
-        serialEvent();
+        serialEvent_();
 }
 
 #define MAX_CAL_REF_NUM     5
@@ -290,8 +284,42 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
         }
     }
     
+
+    // for taking uncalibrated sensor value
+    // pH uncalibrated
+    if ( plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_pH_uncalibrated))) )
+    {
+        json_buffer.createNestedObject(F("pH_uncal"));
+        json_buffer[F("pH_uncal")]["value"] = Sensor::getPH_uncal();
+        json_buffer[F("pH_uncal")][F("stdev")] = Sensor::getPH_uncal_stdev();
+        json_buffer[F("pH_uncal")][F("stable_count")] = Sensor::getPH_uncal_stableCount();
+        json_buffer[F("pH_uncal")][F("stable")] = Sensor::isPH_uncal_stable();
+    }
+
+    // conductivity uncalibrated
+    if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_ec_uncalibrated))))
+    {
+        json_buffer.createNestedObject(F("EC_uncal"));
+        json_buffer[F("EC_uncal")]["value"] = Sensor::getEC_uncal();
+        json_buffer[F("EC_uncal")][F("stdev")] = Sensor::getEC_uncal_stdev();
+        json_buffer[F("EC_uncal")][F("stable_count")] = Sensor::getEC_uncal_stableCount();
+        json_buffer[F("EC_uncal")][F("stable")] = Sensor::isEC_uncal_stable();
+    }
+
+    // conductivity uncalibrated
+    if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_do_uncalibrated))))
+    {
+        json_buffer.createNestedObject(F("DO_uncal"));
+        json_buffer[F("DO_uncal")]["value"] = Sensor::getDO_percent_uncal();
+        json_buffer[F("DO_uncal")][F("stdev")] = Sensor::getDO_uncal_stdev();
+        json_buffer[F("DO_uncal")][F("stable_count")] = Sensor::getDO_uncal_stableCount();
+        json_buffer[F("DO_uncal")][F("stable")] = Sensor::isDO_uncal_stable();
+    }
+
     // for parameter sensor_reading
     bool read_all_param = plain.equals((const char *)pgm_read_word(&(key_cmd.read_all)));
+
+    // pH
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_pH))) || read_all_param ) {
         json_buffer.createNestedObject(F("pH"));
         json_buffer[F("pH")]["value"] = Sensor::getpH();
@@ -299,25 +327,31 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
         json_buffer[F("pH")][F("stable")] = Sensor::isPHStable();
     }
 
+    // conductivity
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_conductivity))) || read_all_param) {
-        json_buffer.createNestedObject(F("conductivity"));
-        json_buffer[F("conductivity")][F("value")] = Sensor::getConductivity();
-        json_buffer[F("conductivity")][F("stdev")] = Sensor::getEC_stdev();
-        json_buffer[F("conductivity")][F("stable")] = Sensor::isConductivityStable();
+        json_buffer.createNestedObject(F("EC"));
+        json_buffer[F("EC")][F("value")] = Sensor::getConductivity();
+        json_buffer[F("EC")][F("stdev")] = Sensor::getEC_stdev();
+        json_buffer[F("EC")][F("stable")] = Sensor::isConductivityStable();
     }
 
+    // salinity
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_salinity))) || read_all_param)
         json_buffer[F("salinity")] = Sensor::getSalinity();
     
+    // specific gravity of sea water
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_specific_of_gravity))) || read_all_param)
         json_buffer[F("SoG")] = Sensor::getSpecifivGravity();
     
+    // Total Dissolved Solid 
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_tds))) || read_all_param)
         json_buffer[F("TDS")] = Sensor::getTDS();
     
+    // Dissolved oxygen in percent
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_dissolved_oxygen_percent))) || read_all_param)
         json_buffer[F("DO_%")] = Sensor::getDO_percent();
     
+    // Dissolved oxygen in mg/l
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_dissolved_oxygen_mgl))) || read_all_param){
         json_buffer.createNestedObject(F("DO_mgl"));
         json_buffer[F("DO_mgl")][F("value")] = Sensor::getDO_mgl();
@@ -325,12 +359,19 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
         json_buffer[F("DO_mgl")][F("stable")] = Sensor::isDOStable();
     }
 
+    // water temperature
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_water_temperature))) || read_all_param)
         json_buffer[F("Water Temp")] = Sensor::getWaterTemperature();
 
+    // elevation
     if ( plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_elevation))) )
         json_buffer[F("elevation")] = deviceParameter.elevation;
 
+    // air pressure
+    if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_air_pressure))))
+        json_buffer[F("air_pressure")] = Sensor::getAirPressure();
+
+    // take calibration file
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_calibration_file))))
     {
         json_buffer.createNestedObject(F("Cal"));
@@ -347,6 +388,10 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
         json_buffer[F("Cal")][F("EC")][F("offset")] = deviceParameter.EC_calibration_parameter.offset;
     }
 
+    
+
+    // Sensor::sens.airPressure_in_kpa
+        // serial number
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.get_sn))))
     {
         String buf_sn="";
@@ -355,7 +400,16 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
         }
         json_buffer[F("SN")] = buf_sn;
     }
-
+    else if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.reset_cal_file))))
+    {
+        if ( resetMemory() )
+            json_buffer[(const char *)pgm_read_word(&(key_cmd.reset_cal_file))] = F("success");
+        else
+            json_buffer[(const char *)pgm_read_word(&(key_cmd.reset_cal_file))] = F("failed");
+        Sensor::initSensorPrecision();
+    }
+        
+    // restart this module
     else if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.restart))))
         reset_by_cmd = true;
 
