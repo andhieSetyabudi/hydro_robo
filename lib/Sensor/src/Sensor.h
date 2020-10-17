@@ -108,6 +108,13 @@ class Sensor{
         // DO
         static float getDO_percent_uncal(void)      { return sens.do_percent_uncal;}
         static float getDO_uncal_stdev(void)        { return do_uncal_stable.getDeviasionValue();}
+        static float getDO_uncal_stableCount(void)  { return do_uncal_stable.getStableCount();}
+        static bool isDO_uncal_stable(void)         { return do_uncal_stable.isStable();}
+        // EC
+        static float getEC_uncal(void)              { return sens.ec_uncal;}
+        static float getEC_uncal_stdev(void)        { return ec_uncal_stable.getDeviasionValue();}
+        static float getEC_uncal_stableCount(void)  { return ec_uncal_stable.getStableCount();}
+        static bool isEC_uncal_stable(void)         { return ec_uncal_stable.isStable();}
         
 
     // sub-class 

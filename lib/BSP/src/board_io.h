@@ -30,7 +30,7 @@
 #define EZO_TX_PIN          10
 #define EZO_RX_PIN          11
 
-#define SERIAL_BAUD         115200
+#define SERIAL_BAUD         9600
 
 #define UniqueIDsize        9
 

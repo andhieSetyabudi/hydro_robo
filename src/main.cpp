@@ -1,4 +1,6 @@
+// #define SERIAL_RX_BUFFER_SIZE 256
 #include "main.h"
+
 #include "Arduino.h"
 #include "board_io.h"
 #include <Arduino_FreeRTOS.h>
@@ -136,12 +138,13 @@ void TaskBlink(void *pvParameters)
   for (;;)
   {
     // Serial.println("reading sensor");
-    if ( millis() - time_reading >= 200 )
+    if ( millis() - time_reading >= 250 )
     {
       Sensor::water::app();
       time_reading = millis();
+      taskYIELD();
     }
-    vTaskDelay(50 / portTICK_PERIOD_MS);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   }
 }

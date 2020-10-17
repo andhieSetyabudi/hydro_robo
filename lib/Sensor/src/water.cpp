@@ -127,8 +127,11 @@ void Sensor::water::loadParamSensor(const char *sens)
         Sensor::pH_stable_.pushToBuffer(getpH()); // update stability detector data series
     }
     else if (strstr((const char *)sens, boardKey[1]) != NULL) { // DO
-        floating_buffer = ezo_Module.get_reading();
-        Sensor::sens.DO2_percent = deviceParameter.DO_calibration_parameter.slope * floating_buffer + 
+        Sensor::sens.do_percent_uncal = ezo_Module.get_reading();
+        // push to stabilitydetector buffer
+        Sensor::do_uncal_stable.pushToBuffer(getDO_percent_uncal());
+
+        Sensor::sens.DO2_percent = deviceParameter.DO_calibration_parameter.slope * getDO_percent_uncal() + 
                                     deviceParameter.DO_calibration_parameter.offset;
         floating_buffer = saturationDOvalue( getWaterTemperature(), getAirPressure(), getConductivity() );
         Sensor::sens.DO2_mgl = floating_buffer * getDO_percent();
@@ -136,11 +139,13 @@ void Sensor::water::loadParamSensor(const char *sens)
     }
     else if (strstr((const char *)sens, boardKey[2]) != NULL) { // EC
         floating_buffer = ezo_Module.get_reading();
-        floating_buffer = deviceParameter.EC_calibration_parameter.slope * floating_buffer +
-                          deviceParameter.EC_calibration_parameter.offset;
+        
         float temp_compen = getWaterTemperature() > 60 ? 60 : (getWaterTemperature() < 0) ? 0 : getWaterTemperature();
-        Sensor::sens.conductivity = conductivityTempCompensation(floating_buffer, temp_compen);
-        // Sensor::sens.conductivity = floating_buffer;
+        Sensor::sens.ec_uncal       = conductivityTempCompensation(floating_buffer, temp_compen);
+        Sensor::sens.conductivity = deviceParameter.EC_calibration_parameter.slope * getEC_uncal() +
+                                    deviceParameter.EC_calibration_parameter.offset;
+
+        // Sensor::sens.conductivity   = conductivityTempCompensation(floating_buffer, temp_compen);
         Sensor::sens.salinity = condToSal(getConductivity(), getWaterTemperature());
 
         Sensor::sens.specificOfGravity  = density_salt_water(getSalinity(), getWaterTemperature(), getAirPressure()*1000.f);
@@ -179,14 +184,14 @@ void Sensor::water::app(void)
     waterDelay(10);
     loadParamSensor(moduleInfo[ch_index].name);
     
-    // set temperature compensation
-    if ( sens_temp_comp ){
-        waterDelay(100);
-        if ( sens.water_temperature >= 0 && sens.water_temperature <= 75 )
-            ezo_Module.send_cmd("T,"+String(sens.water_temperature,2),NULL, 0);
-        else
-            ezo_Module.send_cmd("T,25.00", NULL, 0);
-    };
+    // // set temperature compensation
+    // if ( sens_temp_comp ){
+    //     waterDelay(100);
+    //     if ( sens.water_temperature >= 0 && sens.water_temperature <= 75 )
+    //         ezo_Module.send_cmd("T,"+String(sens.water_temperature,2),NULL, 0);
+    //     else
+    //         ezo_Module.send_cmd("T,25.00", NULL, 0);
+    // };
     Sensor::waterParamInfo();
     ch_index++;
 }

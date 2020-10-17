@@ -11,13 +11,17 @@
 #define cal_reference   F("sp")
 #define cal_currVal     F("cp")
 
+#define EC_sensor_      "ec"
+#define pH_sensor_      "ph"
+#define DO_sensor_      "do"
+
 void (*resetFunc)(void) = 0;
 StaticJsonDocument<500> json_buffer;
 const serial_key key_cmd PROGMEM = {
 
     .ping       = "ping",
     .get_sn     = "get_sn",
-    .restart    = "restart" ,
+    .restart    = "restart",
 
     .read_pH_uncalibrated = "get_pH_uncal",
     .read_ec_uncalibrated = "get_ec_uncal",
@@ -44,6 +48,7 @@ void (*serial_com::halt)(uint32_t t) = NULL;
 bool serial_com::reset_by_cmd   = false;
 void serialEvent()
 {
+    serial_com::serialBuffer = "";
     while ( Serial.available() )
     {
         // get the new byte:
@@ -54,11 +59,13 @@ void serialEvent()
         // do something about it:
         if ( inChar == '\n' )
         {
-            // take the last string value
-            // uint16_t lastPos = serial_com::serialBuffer.length();
-            // char lastBuffer = serial_com::serialBuffer.charAt(lastPos);
-            // if( lastBuffer == '\r' )
+                // take the last string value
+                // uint16_t lastPos = serial_com::serialBuffer.length();
+                // char lastBuffer = serial_com::serialBuffer.charAt(lastPos);
+                // if( lastBuffer == '\r' )
+                
                 serial_com::serialFlag = true;
+                break;
         }
     }
 }
@@ -83,30 +90,38 @@ void serial_com::setup()
     if (!Serial){
         serial_halt(1000);
     }
-    serialBuffer.reserve(256);
+    serialBuffer.reserve(500);
+    reset_by_cmd = false;
 }
 
 void serial_com::app()
 {
     if (serialFlag )
     {
-        serialBuffer.trim();
-        serialBuffer.toLowerCase();
+        // serialBuffer.trim();
+        // serialBuffer.toLowerCase();
+        Serial.println(serialBuffer);
+        Serial.flush();
         parser();
         serialFlag = false;
         serialBuffer = "";
         if (reset_by_cmd)
         {
+            reset_by_cmd = false;
             Serial.println(F("Restart module by CMD !"));
+            Serial.flush();
             resetFunc();
         }
     }
+    if ( Serial.available())
+        serialEvent();
 }
 
 #define MAX_CAL_REF_NUM     5
 void serial_com::parser(void)
 {
-    StaticJsonDocument<368> parserDoc;
+    StaticJsonDocument<500> parserDoc;
+    serialBuffer.toLowerCase();
     DeserializationError error = deserializeJson(parserDoc, serialBuffer);
     if (error ){
         StaticJsonDocument<80> error_info;
@@ -134,7 +149,6 @@ void serial_com::parser(void)
                 cmd_ = json_obj[command_key][idx].as<String>();
                 parsingByKeyword(cmd_, json_string);
                 Serial.println(cmd_);
-                halt(10);
             }
         }
         else
@@ -197,9 +211,9 @@ void serial_com::parser(void)
             {
                 String sens_type = sub_obj[F("type")].as<String>();
                 sens_type.trim();
-                sens_type.toLowerCase();
+                // sens_type.toLowerCase();
                 Serial.println("kalibrasi : " + sens_type);
-                if (sens_type.equals(F("ph"))) // pH
+                if ( sens_type.equalsIgnoreCase(boardKey[0]) ) // pH
                 {
                     if ( len > 1)
                         RegresionLinear(cur, ref, len, &deviceParameter.pH_calibration_parameter.slope, &deviceParameter.pH_calibration_parameter.offset);
@@ -211,14 +225,39 @@ void serial_com::parser(void)
                     if (isnan(deviceParameter.pH_calibration_parameter.slope)) deviceParameter.pH_calibration_parameter.slope = 1;
                     if (isnan(deviceParameter.pH_calibration_parameter.offset)) deviceParameter.pH_calibration_parameter.offset = 0;
                     Serial.println(" pH slope : " + String(deviceParameter.pH_calibration_parameter.slope) + "\toffset" + String(deviceParameter.pH_calibration_parameter.offset));
+                    backUpMemory();
                 }
-                else if (sens_type.equals(boardKey[1])) // DO
-                { 
-
-                }
-                else if (sens_type.equals(boardKey[2])) // EC
+                else if (sens_type.equalsIgnoreCase(boardKey[1])) // DO
                 {
-
+                    if (len > 1)
+                        RegresionLinear(cur, ref, len, &deviceParameter.DO_calibration_parameter.slope, &deviceParameter.DO_calibration_parameter.offset);
+                    else
+                    {
+                        deviceParameter.DO_calibration_parameter.slope = ref[len] / cur[len];
+                        deviceParameter.DO_calibration_parameter.offset = 0;
+                    }
+                    if (isnan(deviceParameter.DO_calibration_parameter.slope))
+                        deviceParameter.DO_calibration_parameter.slope = 1;
+                    if (isnan(deviceParameter.DO_calibration_parameter.offset))
+                        deviceParameter.DO_calibration_parameter.offset = 0;
+                    Serial.println(" DO slope : " + String(deviceParameter.DO_calibration_parameter.slope) + "\toffset" + String(deviceParameter.DO_calibration_parameter.offset));
+                    backUpMemory();
+                }
+                else if (sens_type.equalsIgnoreCase(boardKey[2])) // EC
+                {
+                    if (len > 1)
+                        RegresionLinear(cur, ref, len, &deviceParameter.EC_calibration_parameter.slope, &deviceParameter.EC_calibration_parameter.offset);
+                    else
+                    {
+                        deviceParameter.EC_calibration_parameter.slope = ref[len] / cur[len];
+                        deviceParameter.EC_calibration_parameter.offset = 0;
+                    }
+                    if (isnan(deviceParameter.EC_calibration_parameter.slope))
+                        deviceParameter.EC_calibration_parameter.slope = 1;
+                    if (isnan(deviceParameter.EC_calibration_parameter.offset))
+                        deviceParameter.EC_calibration_parameter.offset = 0;
+                    Serial.println(" EC slope : " + String(deviceParameter.EC_calibration_parameter.slope) + "\toffset" + String(deviceParameter.EC_calibration_parameter.offset));
+                    backUpMemory();
                 }
                 else
                 {
@@ -226,7 +265,7 @@ void serial_com::parser(void)
                     DeserializationError error = deserializeJson(json_buffer, json_string);
                     if (error)
                         json_buffer.clear();
-                    json_buffer[calibration_key] = "unknown sensor";
+                    json_buffer[calibration_key] = F("unknown sensor");
                     serializeJson(json_buffer, json_string);
                     json_buffer.clear();
                 }
@@ -234,6 +273,7 @@ void serial_com::parser(void)
         };
     }
     Serial.println(json_string);
+    Serial.flush();
 }
 
 
@@ -306,6 +346,7 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
         json_buffer[F("Cal")][F("EC")][F("gain")] = deviceParameter.EC_calibration_parameter.slope;
         json_buffer[F("Cal")][F("EC")][F("offset")] = deviceParameter.EC_calibration_parameter.offset;
     }
+
     if (plain.equals((const char *)pgm_read_word(&(key_cmd.get_sn))))
     {
         String buf_sn="";
@@ -315,6 +356,9 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
         json_buffer[F("SN")] = buf_sn;
     }
 
+    else if (plain.equals((const char *)pgm_read_word(&(key_cmd.restart))))
+        reset_by_cmd = true;
+
     else if (plain.equals((const char *)pgm_read_word(&(key_cmd.ping))))
         json_buffer[F("response")] = F("ok");
     else
@@ -322,7 +366,6 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
         if ( json_buffer.isNull() )
             json_buffer[F("response")] = plain + F(" unknown command");
     }
-        
     json_str = "";
     serializeJson(json_buffer, json_str);
     json_buffer.clear();

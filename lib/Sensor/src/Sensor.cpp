@@ -78,9 +78,9 @@ void Sensor::attachDelayCallback(void (*halt)(uint32_t t))
 void Sensor::waterParamInfo(void)
 {
     Serial.println("Water parameter Information");
-    Serial.println(" pH : " + String(sens.pH,2));
-    Serial.println(" DO : " + String(sens.DO2_mgl, 2));
-    Serial.println(" EC : " + String(getConductivity(), 2));
-    Serial.println(" Temp : " + String(sens.water_temperature, 2));
+    Serial.println(" pH : " + String(getpH(),2));
+    Serial.println(" DO : " + String(getDO_mgl(), 2));
+    Serial.println(" EC : " + String(getConductivity(), 2) +"\t EC uncal : "+String(getEC_uncal(),2));
+    Serial.println(" Temp : " + String(getWaterTemperature(), 2));
     Serial.flush();
 }
