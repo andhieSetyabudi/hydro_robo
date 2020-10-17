@@ -157,8 +157,8 @@ void serial_com::parser(void)
             parsingByKeyword(cmd_, json_string);
         }
         
-    }
-    else if (json_obj.containsKey(calibration_key) )
+    };
+    if (json_obj.containsKey(calibration_key) )
     {
         JsonObject sub_obj = json_obj[calibration_key].as<JsonObject>();
         float ref[MAX_CAL_REF_NUM], cur[MAX_CAL_REF_NUM];
