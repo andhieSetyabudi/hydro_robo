@@ -100,7 +100,7 @@ void serial_com::app()
     {
         // serialBuffer.trim();
         // serialBuffer.toLowerCase();
-        Serial.println(serialBuffer);
+        // Serial.println(serialBuffer);
         Serial.flush();
         parser();
         serialFlag = false;
@@ -138,7 +138,7 @@ void serial_com::parser(void)
     {
         JsonArray arr = json_obj[command_key].as<JsonArray>();
         int arrSize = arr.size();
-        Serial.println("found key : " + String(arrSize));
+        // Serial.println("found key : " + String(arrSize));
 
         String cmd_ = "";
         cmd_.reserve(15);
@@ -148,7 +148,7 @@ void serial_com::parser(void)
                 cmd_ = "";
                 cmd_ = json_obj[command_key][idx].as<String>();
                 parsingByKeyword(cmd_, json_string);
-                Serial.println(cmd_);
+                // Serial.println(cmd_);
             }
         }
         else
@@ -163,8 +163,8 @@ void serial_com::parser(void)
         JsonObject sub_obj = json_obj[calibration_key].as<JsonObject>();
         float ref[MAX_CAL_REF_NUM], cur[MAX_CAL_REF_NUM];
         uint8_t len = 0;
-        if (!sub_obj.containsKey(cal_reference) && !!sub_obj.containsKey(cal_currVal))
-        {
+        if ( !sub_obj.containsKey(cal_reference) || !sub_obj.containsKey(cal_currVal) ) 
+        { 
             json_buffer.clear();
             DeserializationError error = deserializeJson(json_buffer, json_string);
             if (error)
@@ -212,7 +212,7 @@ void serial_com::parser(void)
                 String sens_type = sub_obj[F("type")].as<String>();
                 sens_type.trim();
                 // sens_type.toLowerCase();
-                Serial.println("kalibrasi : " + sens_type);
+                // Serial.println("kalibrasi : " + sens_type);
                 if ( sens_type.equalsIgnoreCase(boardKey[0]) ) // pH
                 {
                     if ( len > 1)
@@ -224,7 +224,7 @@ void serial_com::parser(void)
                     }
                     if (isnan(deviceParameter.pH_calibration_parameter.slope)) deviceParameter.pH_calibration_parameter.slope = 1;
                     if (isnan(deviceParameter.pH_calibration_parameter.offset)) deviceParameter.pH_calibration_parameter.offset = 0;
-                    Serial.println(" pH slope : " + String(deviceParameter.pH_calibration_parameter.slope) + "\toffset" + String(deviceParameter.pH_calibration_parameter.offset));
+                    // Serial.println(" pH slope : " + String(deviceParameter.pH_calibration_parameter.slope) + "\toffset" + String(deviceParameter.pH_calibration_parameter.offset));
                     backUpMemory();
                 }
                 else if (sens_type.equalsIgnoreCase(boardKey[1])) // DO
@@ -240,7 +240,7 @@ void serial_com::parser(void)
                         deviceParameter.DO_calibration_parameter.slope = 1;
                     if (isnan(deviceParameter.DO_calibration_parameter.offset))
                         deviceParameter.DO_calibration_parameter.offset = 0;
-                    Serial.println(" DO slope : " + String(deviceParameter.DO_calibration_parameter.slope) + "\toffset" + String(deviceParameter.DO_calibration_parameter.offset));
+                    // Serial.println(" DO slope : " + String(deviceParameter.DO_calibration_parameter.slope) + "\toffset" + String(deviceParameter.DO_calibration_parameter.offset));
                     backUpMemory();
                 }
                 else if (sens_type.equalsIgnoreCase(boardKey[2])) // EC
