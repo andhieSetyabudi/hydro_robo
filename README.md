@@ -37,6 +37,7 @@ for calibrated value
    {"cmd":<keyword>} or {"cmd":[keyword1, keyword2, ..]}
    e.g:
    {"cmd":"ping"} => response is : {"response":"ok"}
+  
    {"cmd":["get_sn", "get_ph"]}=> response is :   {"SN":"56353234313317a12","pH":{"value":7.00299,"stdev":5.026305e-7,"stable":true}}
 
     
