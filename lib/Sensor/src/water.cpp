@@ -121,7 +121,8 @@ void Sensor::water::loadParamSensor(const char *sens)
         compenFactor = ((25.f + 273.15f) / (tmp_temp + 273.15f));
         compenFactor = isnan(compenFactor) ? 1 : (compenFactor < 0) ? 0.001 : compenFactor;
         Sensor::sens.pH = 7.01f + ((Sensor::sens.pH - 7.01f) * compenFactor);
-        // limitation of value ( range 0 - 14 )
+        
+        // limitation of value ( range 0 - 14 ) => normalize
         Sensor::sens.pH = (Sensor::sens.pH < 0.f) ? 0.00f : (Sensor::sens.pH > 14.0f) ? 14.0f : Sensor::sens.pH;
         
         Sensor::pH_stable_.pushToBuffer(getpH()); // update stability detector data series
@@ -133,7 +134,9 @@ void Sensor::water::loadParamSensor(const char *sens)
 
         Sensor::sens.DO2_percent = deviceParameter.DO_calibration_parameter.slope * getDO_percent_uncal() + 
                                     deviceParameter.DO_calibration_parameter.offset;
-        floating_buffer = saturationDOvalue( getWaterTemperature(), getAirPressure(), getConductivity() );
+        // normalize
+        Sensor::sens.DO2_percent = Sensor::sens.DO2_percent < 0 ? 0 : Sensor::sens.DO2_percent;
+        floating_buffer = saturationDOvalue(getWaterTemperature(), getAirPressure(), getConductivity());
         Sensor::sens.DO2_mgl = floating_buffer * getDO_percent();
         Sensor::DO_stable_.pushToBuffer(getDO_mgl()); // update stability detector data series
     }
@@ -144,6 +147,8 @@ void Sensor::water::loadParamSensor(const char *sens)
         Sensor::sens.ec_uncal       = conductivityTempCompensation(floating_buffer, temp_compen);
         Sensor::sens.conductivity = deviceParameter.EC_calibration_parameter.slope * getEC_uncal() +
                                     deviceParameter.EC_calibration_parameter.offset;
+        //normalize
+        Sensor::sens.conductivity = Sensor::sens.conductivity < 0 ? 0 : Sensor::sens.conductivity > 80000 ? 80000 :Sensor ::sens.conductivity;
 
         // Sensor::sens.conductivity   = conductivityTempCompensation(floating_buffer, temp_compen);
         Sensor::sens.salinity = condToSal(getConductivity(), getWaterTemperature());
