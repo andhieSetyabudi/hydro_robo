@@ -292,46 +292,46 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
     
     // for parameter sensor_reading
     bool read_all_param = plain.equals((const char *)pgm_read_word(&(key_cmd.read_all)));
-    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_pH))) || read_all_param ) {
+    if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_pH))) || read_all_param ) {
         json_buffer.createNestedObject(F("pH"));
         json_buffer[F("pH")]["value"] = Sensor::getpH();
         json_buffer[F("pH")][F("stdev")] = Sensor::getPH_stdev();
         json_buffer[F("pH")][F("stable")] = Sensor::isPHStable();
     }
 
-    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_conductivity))) || read_all_param) {
+    if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_conductivity))) || read_all_param) {
         json_buffer.createNestedObject(F("conductivity"));
         json_buffer[F("conductivity")][F("value")] = Sensor::getConductivity();
         json_buffer[F("conductivity")][F("stdev")] = Sensor::getEC_stdev();
         json_buffer[F("conductivity")][F("stable")] = Sensor::isConductivityStable();
     }
 
-    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_salinity))) || read_all_param)
+    if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_salinity))) || read_all_param)
         json_buffer[F("salinity")] = Sensor::getSalinity();
     
-    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_specific_of_gravity))) || read_all_param)
+    if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_specific_of_gravity))) || read_all_param)
         json_buffer[F("SoG")] = Sensor::getSpecifivGravity();
     
-    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_tds))) || read_all_param)
+    if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_tds))) || read_all_param)
         json_buffer[F("TDS")] = Sensor::getTDS();
     
-    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_dissolved_oxygen_percent))) || read_all_param)
+    if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_dissolved_oxygen_percent))) || read_all_param)
         json_buffer[F("DO_%")] = Sensor::getDO_percent();
     
-    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_dissolved_oxygen_mgl))) || read_all_param){
+    if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_dissolved_oxygen_mgl))) || read_all_param){
         json_buffer.createNestedObject(F("DO_mgl"));
         json_buffer[F("DO_mgl")][F("value")] = Sensor::getDO_mgl();
         json_buffer[F("DO_mgl")][F("stdev")] = Sensor::getDO_stdev();
         json_buffer[F("DO_mgl")][F("stable")] = Sensor::isDOStable();
     }
 
-    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_water_temperature))) || read_all_param)
+    if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_water_temperature))) || read_all_param)
         json_buffer[F("Water Temp")] = Sensor::getWaterTemperature();
 
-    if ( plain.equals((const char *)pgm_read_word(&(key_cmd.read_elevation))) )
+    if ( plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_elevation))) )
         json_buffer[F("elevation")] = deviceParameter.elevation;
 
-    if (plain.equals((const char *)pgm_read_word(&(key_cmd.read_calibration_file))))
+    if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_calibration_file))))
     {
         json_buffer.createNestedObject(F("Cal"));
         json_buffer[F("Cal")].createNestedObject(F("pH"));
@@ -347,7 +347,7 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
         json_buffer[F("Cal")][F("EC")][F("offset")] = deviceParameter.EC_calibration_parameter.offset;
     }
 
-    if (plain.equals((const char *)pgm_read_word(&(key_cmd.get_sn))))
+    if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.get_sn))))
     {
         String buf_sn="";
         for (uint8_t l = 0; l < UniqueIDsize; l++){
@@ -356,10 +356,10 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
         json_buffer[F("SN")] = buf_sn;
     }
 
-    else if (plain.equals((const char *)pgm_read_word(&(key_cmd.restart))))
+    else if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.restart))))
         reset_by_cmd = true;
 
-    else if (plain.equals((const char *)pgm_read_word(&(key_cmd.ping))))
+    else if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.ping))))
         json_buffer[F("response")] = F("ok");
     else
     {
