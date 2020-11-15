@@ -22,7 +22,7 @@ parse the command by categories :
 for calibrated value
     "get_all"         : to get reading value of pH, salinity, dissolved-oxygen and temperature. all value has been calibrated
     "get_ph"          : to get pH value
-    "get_conductivity" : to get conductivity value in us/cm
+    "get_ec"          : to get conductivity value in us/cm
     "get_salinity"    : to get salinity value in ppt
     "get_tds"         : to get tds value
     "get_sog"         : to get specific gravity of sea water
