@@ -19,7 +19,7 @@ void system_halt(uint32_t t)
   vTaskDelay(t / portTICK_PERIOD_MS);
 }
 
-bool systemReady;
+bool systemReady = false;
 
 void setup() {
   setup_bsp();
@@ -139,6 +139,7 @@ void TaskBlink(void *pvParameters)
   // Sensor::water::initSensorBoard();
   unsigned long time_reading = millis();
   systemReady = true;
+  Serial.println(F("{\"status\":\"RDY\"}"));
       // Sensor::water::setup();
   for (;;)
   {

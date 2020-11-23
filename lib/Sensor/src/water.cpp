@@ -34,7 +34,7 @@ void Sensor::water::initSensorBoard(void)
     ezoSerial.begin(9600);
     ezoSerial.flush();
     uint8_t infoIndex = 0;
-    Serial.println(F("Water Sensor Initializing"));
+    Serial.println(F("{\"status\":\"Water Sensor Initializing\"}"));
     for (uint8_t id = 0; id < TENTACLES_CH_NUM; id++)
     {
         tentacles_open_channel(id);
@@ -53,7 +53,7 @@ void Sensor::water::initSensorBoard(void)
                     moduleInfo[infoIndex].ch = id;
                     moduleInfo[infoIndex].status = 0;
                     infoIndex++;
-                    Serial.println("module found " + String(boardKey[key])+" at ch"+String(id));
+                    Serial.println("{\"status\":\"module found " + String(boardKey[key]) + " at ch" + String(id)+"\"}");
                     ezo_Module.send_cmd("C,0", NULL, 0); //send the command to turn off continuous mode
                                                          //in this case we arent concerned about waiting for the reply
                     waterDelay(100);
@@ -92,14 +92,14 @@ void Sensor::water::initSensorBoard(void)
                             };
                         };
                     }
-                        
-
                     break; // quit from loop
                 };
             };
         }
         if (infoIndex >= NUM_OF_EZO)
             break;
+        else if (id == TENTACLES_CH_NUM - 1)
+            Serial.println(F("{\"status\":\"Module Not Found !\"}"));
         waterDelay(20);
     };
 }

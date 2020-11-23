@@ -61,7 +61,7 @@ void Sensor::setup(void){
     // default is sleep = false;
     systemSleep = false;
     Sensor::water::setup();
-    Sensor::air::setup();
+    // Sensor::air::setup();
 
 }
 
