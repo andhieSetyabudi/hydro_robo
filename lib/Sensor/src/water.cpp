@@ -138,7 +138,7 @@ void Sensor::water::loadParamSensor(const char *sens)
         // normalize
         Sensor::sens.DO2_percent = Sensor::sens.DO2_percent < 0 ? 0 : Sensor::sens.DO2_percent;
         floating_buffer = saturationDOvalue(getWaterTemperature(), getAirPressure(), getConductivity());
-        Sensor::sens.DO2_mgl = floating_buffer * getDO_percent();
+        Sensor::sens.DO2_mgl = floating_buffer * getDO_percent()/100.f;
         Sensor::DO_stable_.pushToBuffer(getDO_mgl()); // update stability detector data series
     }
     else if (strstr((const char *)sens, boardKey[2]) != NULL) { // EC
