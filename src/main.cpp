@@ -136,7 +136,7 @@ void TaskBlink(void *pvParameters)
   pinMode(LED_BUILTIN, OUTPUT);
   Sensor::attachDelayCallback(system_halt);
   Sensor::setup();
-  Sensor::water::initSensorBoard();
+  // Sensor::water::initSensorBoard();
   unsigned long time_reading = millis();
   systemReady = true;
       // Sensor::water::setup();
@@ -146,9 +146,11 @@ void TaskBlink(void *pvParameters)
     if ( millis() - time_reading >= 150 )
     {
       Sensor::water::app();
+      // Sensor::air::app();
       time_reading = millis();
       taskYIELD();
     }
+
     vTaskDelay(75 / portTICK_PERIOD_MS);
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   }

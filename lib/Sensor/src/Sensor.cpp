@@ -58,8 +58,11 @@ void Sensor::setup(void){
     clearAllSensor();
 
     initSensorPrecision();    
-    // default is sleep
+    // default is sleep = false;
     systemSleep = false;
+    Sensor::water::setup();
+    Sensor::air::setup();
+
 }
 
 void Sensor::setSleep(bool sleep){

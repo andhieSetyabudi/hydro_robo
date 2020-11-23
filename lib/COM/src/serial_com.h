@@ -29,7 +29,8 @@ typedef struct serial_keyword{
 // write command
     const char* write_calibration_file;
     const char* write_tds_constant;
-    const char* write_elevation;
+    const char* set_elevation;
+    const char* setPrecision_file;
 }serial_key;
 
 extern const serial_key key_cmd PROGMEM;
@@ -40,6 +41,10 @@ class serial_com{
         static void (*halt)(uint32_t t);
         static void serial_halt(uint32_t t);
         static void parsingByKeyword(const String &plain, String &json_str);
+        static void parsingToSetParam(const String &plain, String &json_str);
+
+    // notify only
+        static void calibration_done(String &bufStr, const char* sens_type, const char* status);
     public:
         static void setup();
         static void app();

@@ -154,7 +154,16 @@ class Sensor::water{
 class Sensor::air{
     friend Sensor;
     private :
+        static HardwareSerial serial_line[3];
+        static Ezo_uart ezo_Module1;
         static uint32_t lastSensTime;
+
+        // keep the last time of taking data
+        static uint32_t lastSensAirTime;
+        static void updateTimeMillis(void);
+        static void airDelay(uint32_t timeDelay);
+
+
     public :
         static void setup(void);
         static void app(void);

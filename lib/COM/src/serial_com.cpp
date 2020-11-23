@@ -8,6 +8,7 @@
 
 #define command_key     F("cmd")
 #define calibration_key F("cal")
+#define set_key         F("set")
 #define cal_reference   F("sp")
 #define cal_currVal     F("cp")
 
@@ -27,20 +28,24 @@ const serial_key key_cmd PROGMEM = {
     .read_ec_uncalibrated = "get_ec_uncal",
     .read_do_uncalibrated = "get_do_uncal",
 
-    .read_all = "get_all",
-    .read_pH = "get_ph",
-    .read_conductivity = "get_ec",
-    .read_salinity = "get_sal",
-    .read_tds = "get_tds",
-    .read_specific_of_gravity = "get_sog",
-    .read_dissolved_oxygen_mgl = "get_do_mgl",
-    .read_dissolved_oxygen_percent = "get_do_%",
-    .read_water_temperature = "get_water_temp",
-    .read_elevation = "get_elevation",
-    .read_air_pressure = "get_air_pressure",
-    .read_calibration_file = "get_cal_file",
-    .reset_cal_file = "rst_cal_file",
+    .read_all                       = "get_all",
+    .read_pH                        = "get_ph",
+    .read_conductivity              = "get_ec",
+    .read_salinity                  = "get_sal",
+    .read_tds                       = "get_tds",
+    .read_specific_of_gravity       = "get_sog",
+    .read_dissolved_oxygen_mgl      = "get_do_mgl",
+    .read_dissolved_oxygen_percent  = "get_do_%",
+    .read_water_temperature         = "get_water_temp",
+    .read_elevation                 = "get_elevation",
+    .read_air_pressure              = "get_air_pressure",
+    .read_calibration_file          = "get_cal_file",
+    .reset_cal_file                 = "rst_cal_file",
 
+    .write_calibration_file         = "cal_file",
+    .write_tds_constant             = "tds_const",
+    .set_elevation                  = "elevation",
+    .setPrecision_file              = "precision_file",
 };
 
 String serial_com::serialBuffer = "";
@@ -115,6 +120,7 @@ void serial_com::app()
 void serial_com::parser(void)
 {
     StaticJsonDocument<500> parserDoc;
+    serialBuffer.trim();
     serialBuffer.toLowerCase();
     DeserializationError error = deserializeJson(parserDoc, serialBuffer);
     if (error ){
@@ -218,8 +224,12 @@ void serial_com::parser(void)
                     }
                     if (isnan(deviceParameter.pH_calibration_parameter.slope)) deviceParameter.pH_calibration_parameter.slope = 1;
                     if (isnan(deviceParameter.pH_calibration_parameter.offset)) deviceParameter.pH_calibration_parameter.offset = 0;
-                    // Serial.println(" pH slope : " + String(deviceParameter.pH_calibration_parameter.slope) + "\toffset" + String(deviceParameter.pH_calibration_parameter.offset));
-                    backUpMemory();
+
+                    // save to EEPROM
+                    if (backUpMemory())
+                        calibration_done(json_string, (const char *)F("pH"), (const char *)F("Success"));
+                    else
+                        calibration_done(json_string, (const char *)F("pH"), (const char *)F("Failed"));
                 }
                 else if (sens_type.equalsIgnoreCase(boardKey[1])) // DO
                 {
@@ -234,8 +244,10 @@ void serial_com::parser(void)
                         deviceParameter.DO_calibration_parameter.slope = 1;
                     if (isnan(deviceParameter.DO_calibration_parameter.offset))
                         deviceParameter.DO_calibration_parameter.offset = 0;
-                    // Serial.println(" DO slope : " + String(deviceParameter.DO_calibration_parameter.slope) + "\toffset" + String(deviceParameter.DO_calibration_parameter.offset));
-                    backUpMemory();
+                    if ( backUpMemory() )
+                        calibration_done(json_string, (const char *)F("DO"), (const char *)F("Success"));
+                    else
+                        calibration_done(json_string, (const char *)F("DO"), (const char *)F("Failed"));
                 }
                 else if (sens_type.equalsIgnoreCase(boardKey[2])) // EC
                 {
@@ -250,8 +262,13 @@ void serial_com::parser(void)
                         deviceParameter.EC_calibration_parameter.slope = 1;
                     if (isnan(deviceParameter.EC_calibration_parameter.offset))
                         deviceParameter.EC_calibration_parameter.offset = 0;
-                    Serial.println(" EC slope : " + String(deviceParameter.EC_calibration_parameter.slope) + "\toffset" + String(deviceParameter.EC_calibration_parameter.offset));
-                    backUpMemory();
+                    // Serial.println(" EC slope : " + String(deviceParameter.EC_calibration_parameter.slope) + "\toffset" + String(deviceParameter.EC_calibration_parameter.offset));
+                    
+                    // save to eeprom
+                    if (backUpMemory())
+                        calibration_done(json_string, (const char *)F("EC"), (const char *)F("Success"));
+                    else
+                        calibration_done(json_string, (const char *)F("EC"), (const char *)F("Failed"));
                 }
                 else
                 {
@@ -265,7 +282,31 @@ void serial_com::parser(void)
                 }
             }
         };
-    }
+    };
+    if (json_obj.containsKey(set_key))
+    {
+        JsonArray arr = json_obj[command_key].as<JsonArray>();
+        int arrSize = arr.size();
+        // Serial.println("found key : " + String(arrSize));
+
+        String cmd_ = "";
+        cmd_.reserve(15);
+        if (arrSize > 0)
+        {
+            for (uint8_t idx = 0; idx < arrSize; idx++)
+            {
+                cmd_ = "";
+                cmd_ = json_obj[command_key][idx].as<String>();
+                parsingToSetParam(cmd_, json_string);
+            }
+        }
+        else
+        {
+            cmd_ = json_obj[command_key].as<String>();
+            parsingToSetParam(cmd_, json_string);
+        }
+    };
+
     Serial.println(json_string);
     Serial.flush();
 }
@@ -422,5 +463,37 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
     }
     json_str = "";
     serializeJson(json_buffer, json_str);
+    json_buffer.clear();
+}
+
+void serial_com::parsingToSetParam(const String &plain, String &json_str)
+{
+    // creating json base
+    json_buffer.clear();
+    if (json_str.length() > 3)
+    {
+        DeserializationError error = deserializeJson(json_buffer, json_str);
+        if (error)
+        {
+            json_buffer.clear();
+        }
+    }
+    // set elevation
+    if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.set_elevation))))
+    {
+        deviceParameter.elevation = 5;
+    }
+}
+
+
+void serial_com::calibration_done(String &bufStr, const char* sens_type, const char* status)
+{
+    json_buffer.clear();
+    DeserializationError error = deserializeJson(json_buffer, bufStr);
+    if (error)
+        json_buffer.clear();
+    json_buffer.createNestedObject(calibration_key);
+    json_buffer[calibration_key][sens_type] = status;
+    serializeJson(json_buffer, bufStr);
     json_buffer.clear();
 }

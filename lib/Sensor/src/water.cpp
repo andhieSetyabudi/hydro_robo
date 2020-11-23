@@ -34,7 +34,7 @@ void Sensor::water::initSensorBoard(void)
     ezoSerial.begin(9600);
     ezoSerial.flush();
     uint8_t infoIndex = 0;
-    Serial.println("Water Sensor Initializing");
+    Serial.println(F("Water Sensor Initializing"));
     for (uint8_t id = 0; id < TENTACLES_CH_NUM; id++)
     {
         tentacles_open_channel(id);
@@ -171,10 +171,10 @@ void Sensor::water::loadParamSensor(const char *sens)
 
 void Sensor::water::setup(void)
 {
-    sens = {0};
     // waiting for system ready
     while( Sensor::isSleep() ) waterDelay(20);
 
+    initSensorBoard();
     // taking first tick and store it
     updateTimeMillis();
 }
