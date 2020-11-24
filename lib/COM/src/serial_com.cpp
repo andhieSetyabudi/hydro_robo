@@ -17,7 +17,8 @@
 #define DO_sensor_      "do"
 
 void (*resetFunc)(void) = 0;
-StaticJsonDocument<500> json_buffer;
+StaticJsonDocument<512> json_buffer;
+String json_string = " ";
 const serial_key key_cmd PROGMEM = {
 
     .ping = "ping",
@@ -133,7 +134,7 @@ void serial_com::parser(void)
         return;
     }
     JsonObject json_obj = parserDoc.as<JsonObject>();
-    String json_string = " ";
+    
     if (json_obj.containsKey(command_key)) // check for user cmd request
     {
         JsonArray arr = json_obj[command_key].as<JsonArray>();
@@ -169,7 +170,7 @@ void serial_com::parser(void)
             DeserializationError error = deserializeJson(json_buffer, json_string);
             if (error)
                 json_buffer.clear();
-            json_buffer[calibration_key] = "no reference value";
+            json_buffer[calibration_key] = F("no reference value");
             serializeJson(json_buffer, json_string);
             json_buffer.clear();
         }
@@ -245,9 +246,9 @@ void serial_com::parser(void)
                     if (isnan(deviceParameter.DO_calibration_parameter.offset))
                         deviceParameter.DO_calibration_parameter.offset = 0;
                     if ( backUpMemory() )
-                        calibration_done(json_string, (const char *)F("DO"), (const char *)F("Success"));
+                        calibration_done(json_string, (const char *)"DO", (const char *)"Success");
                     else
-                        calibration_done(json_string, (const char *)F("DO"), (const char *)F("Failed"));
+                        calibration_done(json_string, (const char *)"DO", (const char *)"Failed");
                 }
                 else if (sens_type.equalsIgnoreCase(boardKey[2])) // EC
                 {

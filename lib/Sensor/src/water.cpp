@@ -34,7 +34,7 @@ void Sensor::water::initSensorBoard(void)
     ezoSerial.begin(9600);
     ezoSerial.flush();
     uint8_t infoIndex = 0;
-    Serial.println(F("{\"status\":\"Water Sensor Initializing\"}"));
+    // Serial.println(F("{\"status\":\"Water Sensor Initializing\"}"));
     for (uint8_t id = 0; id < TENTACLES_CH_NUM; id++)
     {
         tentacles_open_channel(id);
@@ -53,7 +53,7 @@ void Sensor::water::initSensorBoard(void)
                     moduleInfo[infoIndex].ch = id;
                     moduleInfo[infoIndex].status = 0;
                     infoIndex++;
-                    Serial.println("{\"status\":\"module found " + String(boardKey[key]) + " at ch" + String(id)+"\"}");
+                    // Serial.println("{\"status\":\"module found " + String(boardKey[key]) + " at ch" + String(id)+"\"}");
                     ezo_Module.send_cmd("C,0", NULL, 0); //send the command to turn off continuous mode
                                                          //in this case we arent concerned about waiting for the reply
                     waterDelay(100);
@@ -98,8 +98,8 @@ void Sensor::water::initSensorBoard(void)
         }
         if (infoIndex >= NUM_OF_EZO)
             break;
-        else if (id == TENTACLES_CH_NUM - 1)
-            Serial.println(F("{\"status\":\"Module Not Found !\"}"));
+        // else if (id == TENTACLES_CH_NUM - 1)
+        //     Serial.println(F("{\"status\":\"Module Not Found !\"}"));
         waterDelay(20);
     };
 }
@@ -175,6 +175,32 @@ void Sensor::water::setup(void)
     while( Sensor::isSleep() ) waterDelay(20);
 
     initSensorBoard();
+    String sensor_info = "{\"status\":{";
+    for (uint8_t key = 0; key < NUM_OF_EZO; key++) // index of ezo name
+    {
+        for ( uint8_t id = 0; id < NUM_OF_EZO; id++)
+        {
+            if (strstr((const char *)moduleInfo[id].name, boardKey[key]) != NULL)
+            {
+                sensor_info += "\"" + String(moduleInfo[id].name) + "\":\"ch-" + String(moduleInfo[id].ch)+"\"";
+                break;
+            }
+            else if (id == NUM_OF_EZO - 1)
+                sensor_info += "\"" + String(boardKey[key]) + "\":\"null\"";
+        }
+        if (key < (NUM_OF_EZO - 1))
+            sensor_info += ',';
+    };
+    sensor_info += "}}";
+    Serial.println(sensor_info);
+    // {
+    //     "status":
+    //     {
+    //         "do" : null
+    //                "ph" : null
+    //                       "ec" : null
+    //     }
+    // }
     // taking first tick and store it
     updateTimeMillis();
 }

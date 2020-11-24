@@ -46,7 +46,7 @@ void setup() {
 
   xTaskCreate(TaskSerial,
               "Serial",
-              2048,
+              2560,
               NULL,
               1,
               NULL);
