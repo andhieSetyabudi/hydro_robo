@@ -6,6 +6,8 @@
 
 #include "ArduinoJson.h"
 
+#define buffer_serial_len       512
+
 #define command_key     F("cmd")
 #define calibration_key F("cal")
 #define set_key         F("set")
@@ -16,8 +18,9 @@
 #define pH_sensor_      "ph"
 #define DO_sensor_      "do"
 
+
 void (*resetFunc)(void) = 0;
-StaticJsonDocument<512> json_buffer;
+StaticJsonDocument<buffer_serial_len> json_buffer;
 String json_string = " ";
 const serial_key key_cmd PROGMEM = {
 
@@ -92,7 +95,7 @@ void serial_com::setup()
     if (!Serial){
         serial_halt(1000);
     }
-    serialBuffer.reserve(500);
+    serialBuffer.reserve(200);
     reset_by_cmd = false;
 }
 
@@ -120,12 +123,12 @@ void serial_com::app()
 #define MAX_CAL_REF_NUM     5
 void serial_com::parser(void)
 {
-    StaticJsonDocument<500> parserDoc;
+    StaticJsonDocument<buffer_serial_len> parserDoc;
     serialBuffer.trim();
     serialBuffer.toLowerCase();
     DeserializationError error = deserializeJson(parserDoc, serialBuffer);
     if (error ){
-        StaticJsonDocument<80> error_info;
+        StaticJsonDocument<100> error_info;
         error_info["response"] = "error";
         error_info["status"]= "unknown or corrupt ";
         String tmp;
@@ -228,9 +231,9 @@ void serial_com::parser(void)
 
                     // save to EEPROM
                     if (backUpMemory())
-                        calibration_done(json_string, (const char *)F("pH"), (const char *)F("Success"));
+                        calibration_done(json_string, (const char *)"pH", (const char *)"Success");
                     else
-                        calibration_done(json_string, (const char *)F("pH"), (const char *)F("Failed"));
+                        calibration_done(json_string, (const char *)"pH", (const char *)"Failed");
                 }
                 else if (sens_type.equalsIgnoreCase(boardKey[1])) // DO
                 {
@@ -267,9 +270,9 @@ void serial_com::parser(void)
                     
                     // save to eeprom
                     if (backUpMemory())
-                        calibration_done(json_string, (const char *)F("EC"), (const char *)F("Success"));
+                        calibration_done(json_string, (const char *)"EC", (const char *)"Success");
                     else
-                        calibration_done(json_string, (const char *)F("EC"), (const char *)F("Failed"));
+                        calibration_done(json_string, (const char *)"EC", (const char *)"Failed");
                 }
                 else
                 {
@@ -310,19 +313,20 @@ void serial_com::parser(void)
 
     Serial.println(json_string);
     Serial.flush();
+    json_string = "";
 }
 
 
 void serial_com::parsingByKeyword(const String &plain, String &json_str)
 {
-    json_buffer.clear();
+    StaticJsonDocument<buffer_serial_len> json_buffer_msg;
+    // json_buffer_msg.clear();
     if ( json_str.length() > 3 )
     {
-        DeserializationError error = deserializeJson(json_buffer, json_str);
+        DeserializationError error = deserializeJson(json_buffer_msg, json_str);
         if (error)
         {
-            json_buffer.clear();
-            
+            json_buffer_msg.clear();
         }
     }
     
@@ -331,31 +335,31 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
     // pH uncalibrated
     if ( plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_pH_uncalibrated))) )
     {
-        json_buffer.createNestedObject(F("pH_uncal"));
-        json_buffer[F("pH_uncal")]["value"] = Sensor::getPH_uncal();
-        json_buffer[F("pH_uncal")][F("stdev")] = Sensor::getPH_uncal_stdev();
-        json_buffer[F("pH_uncal")][F("stable_count")] = Sensor::getPH_uncal_stableCount();
-        json_buffer[F("pH_uncal")][F("stable")] = Sensor::isPH_uncal_stable();
+        json_buffer_msg.createNestedObject(F("pH_uncal"));
+        json_buffer_msg[F("pH_uncal")]["value"] = Sensor::getPH_uncal();
+        json_buffer_msg[F("pH_uncal")][F("stdev")] = Sensor::getPH_uncal_stdev();
+        json_buffer_msg[F("pH_uncal")][F("stable_count")] = Sensor::getPH_uncal_stableCount();
+        json_buffer_msg[F("pH_uncal")][F("stable")] = Sensor::isPH_uncal_stable();
     }
 
     // conductivity uncalibrated
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_ec_uncalibrated))))
     {
-        json_buffer.createNestedObject(F("EC_uncal"));
-        json_buffer[F("EC_uncal")]["value"] = Sensor::getEC_uncal();
-        json_buffer[F("EC_uncal")][F("stdev")] = Sensor::getEC_uncal_stdev();
-        json_buffer[F("EC_uncal")][F("stable_count")] = Sensor::getEC_uncal_stableCount();
-        json_buffer[F("EC_uncal")][F("stable")] = Sensor::isEC_uncal_stable();
+        json_buffer_msg.createNestedObject(F("EC_uncal"));
+        json_buffer_msg[F("EC_uncal")]["value"] = Sensor::getEC_uncal();
+        json_buffer_msg[F("EC_uncal")][F("stdev")] = Sensor::getEC_uncal_stdev();
+        json_buffer_msg[F("EC_uncal")][F("stable_count")] = Sensor::getEC_uncal_stableCount();
+        json_buffer_msg[F("EC_uncal")][F("stable")] = Sensor::isEC_uncal_stable();
     }
 
     // conductivity uncalibrated
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_do_uncalibrated))))
     {
-        json_buffer.createNestedObject(F("DO_uncal"));
-        json_buffer[F("DO_uncal")]["value"] = Sensor::getDO_percent_uncal();
-        json_buffer[F("DO_uncal")][F("stdev")] = Sensor::getDO_uncal_stdev();
-        json_buffer[F("DO_uncal")][F("stable_count")] = Sensor::getDO_uncal_stableCount();
-        json_buffer[F("DO_uncal")][F("stable")] = Sensor::isDO_uncal_stable();
+        json_buffer_msg.createNestedObject(F("DO_uncal"));
+        json_buffer_msg[F("DO_uncal")]["value"] = Sensor::getDO_percent_uncal();
+        json_buffer_msg[F("DO_uncal")][F("stdev")] = Sensor::getDO_uncal_stdev();
+        json_buffer_msg[F("DO_uncal")][F("stable_count")] = Sensor::getDO_uncal_stableCount();
+        json_buffer_msg[F("DO_uncal")][F("stable")] = Sensor::isDO_uncal_stable();
     }
 
     // for parameter sensor_reading
@@ -363,71 +367,71 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
 
     // pH
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_pH))) || read_all_param ) {
-        json_buffer.createNestedObject(F("pH"));
-        json_buffer[F("pH")]["value"] = Sensor::getpH();
-        json_buffer[F("pH")][F("stdev")] = Sensor::getPH_stdev();
-        json_buffer[F("pH")][F("stable")] = Sensor::isPHStable();
+        json_buffer_msg.createNestedObject(F("pH"));
+        json_buffer_msg[F("pH")]["value"] = Sensor::getpH();
+        json_buffer_msg[F("pH")][F("stdev")] = Sensor::getPH_stdev();
+        json_buffer_msg[F("pH")][F("stable")] = Sensor::isPHStable();
     }
 
     // conductivity
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_conductivity))) || read_all_param) {
-        json_buffer.createNestedObject(F("EC"));
-        json_buffer[F("EC")][F("value")] = Sensor::getConductivity();
-        json_buffer[F("EC")][F("stdev")] = Sensor::getEC_stdev();
-        json_buffer[F("EC")][F("stable")] = Sensor::isConductivityStable();
+        json_buffer_msg.createNestedObject(F("EC"));
+        json_buffer_msg[F("EC")][F("value")] = Sensor::getConductivity();
+        json_buffer_msg[F("EC")][F("stdev")] = Sensor::getEC_stdev();
+        json_buffer_msg[F("EC")][F("stable")] = Sensor::isConductivityStable();
     }
 
     // salinity
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_salinity))) || read_all_param)
-        json_buffer[F("salinity")] = Sensor::getSalinity();
-    
+        json_buffer_msg[F("salinity")] = Sensor::getSalinity();
+
     // specific gravity of sea water
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_specific_of_gravity))) || read_all_param)
-        json_buffer[F("SoG")] = Sensor::getSpecifivGravity();
-    
+        json_buffer_msg[F("SoG")] = Sensor::getSpecifivGravity();
+
     // Total Dissolved Solid 
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_tds))) || read_all_param)
-        json_buffer[F("TDS")] = Sensor::getTDS();
-    
+        json_buffer_msg[F("TDS")] = Sensor::getTDS();
+
     // Dissolved oxygen in percent
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_dissolved_oxygen_percent))) || read_all_param)
-        json_buffer[F("DO_%")] = Sensor::getDO_percent();
-    
+        json_buffer_msg[F("DO_%")] = Sensor::getDO_percent();
+
     // Dissolved oxygen in mg/l
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_dissolved_oxygen_mgl))) || read_all_param){
-        json_buffer.createNestedObject(F("DO_mgl"));
-        json_buffer[F("DO_mgl")][F("value")] = Sensor::getDO_mgl();
-        json_buffer[F("DO_mgl")][F("stdev")] = Sensor::getDO_stdev();
-        json_buffer[F("DO_mgl")][F("stable")] = Sensor::isDOStable();
+        json_buffer_msg.createNestedObject(F("DO_mgl"));
+        json_buffer_msg[F("DO_mgl")][F("value")] = Sensor::getDO_mgl();
+        json_buffer_msg[F("DO_mgl")][F("stdev")] = Sensor::getDO_stdev();
+        json_buffer_msg[F("DO_mgl")][F("stable")] = Sensor::isDOStable();
     }
 
     // water temperature
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_water_temperature))) || read_all_param)
-        json_buffer[F("Water Temp")] = Sensor::getWaterTemperature();
+        json_buffer_msg[F("Water Temp")] = Sensor::getWaterTemperature();
 
     // elevation
     if ( plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_elevation))) )
-        json_buffer[F("elevation")] = deviceParameter.elevation;
+        json_buffer_msg[F("elevation")] = deviceParameter.elevation;
 
     // air pressure
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_air_pressure))))
-        json_buffer[F("air_pressure")] = Sensor::getAirPressure();
+        json_buffer_msg[F("air_pressure")] = Sensor::getAirPressure();
 
     // take calibration file
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.read_calibration_file))))
     {
-        json_buffer.createNestedObject(F("Cal"));
-        json_buffer[F("Cal")].createNestedObject(F("pH"));
-        json_buffer[F("Cal")][F("pH")][F("gain")] = deviceParameter.pH_calibration_parameter.slope;
-        json_buffer[F("Cal")][F("pH")][F("offset")] = deviceParameter.pH_calibration_parameter.offset;
+        json_buffer_msg.createNestedObject(F("Cal"));
+        json_buffer_msg[F("Cal")].createNestedObject(F("pH"));
+        json_buffer_msg[F("Cal")][F("pH")][F("gain")] = deviceParameter.pH_calibration_parameter.slope;
+        json_buffer_msg[F("Cal")][F("pH")][F("offset")] = deviceParameter.pH_calibration_parameter.offset;
 
-        json_buffer[F("Cal")].createNestedObject(F("DO"));
-        json_buffer[F("Cal")][F("DO")][F("gain")] = deviceParameter.DO_calibration_parameter.slope;
-        json_buffer[F("Cal")][F("DO")][F("offset")] = deviceParameter.DO_calibration_parameter.offset;
+        json_buffer_msg[F("Cal")].createNestedObject(F("DO"));
+        json_buffer_msg[F("Cal")][F("DO")][F("gain")] = deviceParameter.DO_calibration_parameter.slope;
+        json_buffer_msg[F("Cal")][F("DO")][F("offset")] = deviceParameter.DO_calibration_parameter.offset;
 
-        json_buffer[F("Cal")].createNestedObject(F("EC"));
-        json_buffer[F("Cal")][F("EC")][F("gain")] = deviceParameter.EC_calibration_parameter.slope;
-        json_buffer[F("Cal")][F("EC")][F("offset")] = deviceParameter.EC_calibration_parameter.offset;
+        json_buffer_msg[F("Cal")].createNestedObject(F("EC"));
+        json_buffer_msg[F("Cal")][F("EC")][F("gain")] = deviceParameter.EC_calibration_parameter.slope;
+        json_buffer_msg[F("Cal")][F("EC")][F("offset")] = deviceParameter.EC_calibration_parameter.offset;
     }
 
     
@@ -440,14 +444,14 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
         for (uint8_t l = 0; l < UniqueIDsize; l++){
             buf_sn += String(serialDevice[l],HEX);
         }
-        json_buffer[F("SN")] = buf_sn;
+        json_buffer_msg[F("SN")] = buf_sn;
     }
     else if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.reset_cal_file))))
     {
         if ( resetMemory() )
-            json_buffer[(const char *)pgm_read_word(&(key_cmd.reset_cal_file))] = F("success");
+            json_buffer_msg[(const char *)pgm_read_word(&(key_cmd.reset_cal_file))] = F("success");
         else
-            json_buffer[(const char *)pgm_read_word(&(key_cmd.reset_cal_file))] = F("failed");
+            json_buffer_msg[(const char *)pgm_read_word(&(key_cmd.reset_cal_file))] = F("failed");
         Sensor::initSensorPrecision();
     }
         
@@ -456,45 +460,47 @@ void serial_com::parsingByKeyword(const String &plain, String &json_str)
         reset_by_cmd = true;
 
     else if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.ping))))
-        json_buffer[F("response")] = F("ok");
+        json_buffer_msg[F("response")] = F("ok");
     else
     {
-        if ( json_buffer.isNull() )
-            json_buffer[F("response")] = plain + F(" unknown command");
+        if (json_buffer_msg.isNull())
+            json_buffer_msg[F("response")] = plain + F(" unknown command");
     }
     json_str = "";
-    serializeJson(json_buffer, json_str);
-    json_buffer.clear();
+    serializeJson(json_buffer_msg, json_str);
+    json_buffer_msg.clear();
 }
 
 void serial_com::parsingToSetParam(const String &plain, String &json_str)
 {
     // creating json base
-    json_buffer.clear();
+    StaticJsonDocument<buffer_serial_len> json_buffer_msg;
+    json_buffer_msg.clear();
     if (json_str.length() > 3)
     {
-        DeserializationError error = deserializeJson(json_buffer, json_str);
+        DeserializationError error = deserializeJson(json_buffer_msg, json_str);
         if (error)
         {
-            json_buffer.clear();
+            json_buffer_msg.clear();
         }
     }
     // set elevation
     if (plain.equalsIgnoreCase((const char *)pgm_read_word(&(key_cmd.set_elevation))))
     {
-        deviceParameter.elevation = 5;
+        deviceParameter.elevation = json_buffer_msg[F("set_elevation")].as<float>();
     }
 }
 
 
 void serial_com::calibration_done(String &bufStr, const char* sens_type, const char* status)
 {
-    json_buffer.clear();
-    DeserializationError error = deserializeJson(json_buffer, bufStr);
+    StaticJsonDocument<256> json_buffer_msg;
+    json_buffer_msg.clear();
+    DeserializationError error = deserializeJson(json_buffer_msg, bufStr);
     if (error)
-        json_buffer.clear();
-    json_buffer.createNestedObject(calibration_key);
-    json_buffer[calibration_key][sens_type] = status;
-    serializeJson(json_buffer, bufStr);
-    json_buffer.clear();
+        json_buffer_msg.clear();
+    json_buffer_msg.createNestedObject(calibration_key);
+    json_buffer_msg[calibration_key][sens_type] = status;
+    serializeJson(json_buffer_msg, bufStr);
+    json_buffer_msg.clear();
 }
