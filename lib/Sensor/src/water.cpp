@@ -58,6 +58,7 @@ void Sensor::water::initSensorBoard(void)
                                                          //in this case we arent concerned about waiting for the reply
                     waterDelay(100);
                     ezo_Module.send_cmd("*OK,0", NULL, 0);  // turn of "OK" reply
+                    waterDelay(50);
                     if ( key == 2 ) // specialy case for EC
                     {
                         ezo_Module.send_cmd("K,1", NULL, 0);
@@ -78,8 +79,10 @@ void Sensor::water::initSensorBoard(void)
                         ezo_Module.send_cmd("O,%,1", NULL, 0);
                     }
                     // clear calibration data except RTD module
-                    if (key < ( NUM_OF_EZO - 1 )) // NUM_OF_EZO - 1 meaning last index is RTD sensor
+                    if (key < ( NUM_OF_EZO - 1 ) && key > 0 ) // NUM_OF_EZO - 1 meaning last index is RTD sensor
                     {
+                        ezo_Module.send_cmd("T,25", NULL, 0);
+                        waterDelay(100);
                         sprintf_P(buf_msg, (const char *)F(""));
                         if ( ezo_Module.send_cmd("Cal,?", buf_msg, 19) ){
                             if (strcmp(buf_msg, "*ER") != 0)    // no response error
@@ -107,6 +110,9 @@ void Sensor::water::initSensorBoard(void)
 void Sensor::water::loadParamSensor(const char *sens)
 {
     float floating_buffer = 0;
+    float tmp_temp = (getWaterTemperature() > 60.0f) ? 60.0f : getWaterTemperature();
+    tmp_temp = tmp_temp < -25 ? 25 : tmp_temp;
+
     ezo_Module.flush_rx_buffer();
     if( !ezo_Module.send_read() )
         return;
@@ -114,7 +120,6 @@ void Sensor::water::loadParamSensor(const char *sens)
         floating_buffer = ezo_Module.get_reading();
         // pH is compensated by temperature
         float compenFactor = 0;
-        float tmp_temp = (getWaterTemperature() > 60.0f) ? 60.0f : getWaterTemperature();
         compenFactor = ((25.f + 273.15f) / (tmp_temp + 273.15f));
         compenFactor = isnan(compenFactor) ? 1 : (compenFactor < 0) ? 0.001 : compenFactor;
         Sensor::sens.pH_uncal = 7.01f + ((floating_buffer - 7.01f) * compenFactor);
@@ -137,15 +142,15 @@ void Sensor::water::loadParamSensor(const char *sens)
                                     deviceParameter.DO_calibration_parameter.offset;
         // normalize
         Sensor::sens.DO2_percent = Sensor::sens.DO2_percent < 0 ? 0 : Sensor::sens.DO2_percent;
-        floating_buffer = saturationDOvalue(getWaterTemperature(), getAirPressure(), getConductivity());
+        floating_buffer = saturationDOvalue(tmp_temp, getAirPressure(), getConductivity());
         Sensor::sens.DO2_mgl = floating_buffer * getDO_percent()/100.f;
         Sensor::DO_stable_.pushToBuffer(getDO_mgl()); // update stability detector data series
     }
     else if (strstr((const char *)sens, boardKey[2]) != NULL) { // EC
         floating_buffer = ezo_Module.get_reading();
-        
-        float temp_compen = getWaterTemperature() > 60 ? 60 : (getWaterTemperature() < 0) ? 0 : getWaterTemperature();
-        Sensor::sens.ec_uncal       = conductivityTempCompensation(floating_buffer, temp_compen);
+
+        // float temp_compen = tmp_temp > 60 ? 60 : (getWaterTemperature() < 0) ? 0 : getWaterTemperature();
+        Sensor::sens.ec_uncal = conductivityTempCompensation(floating_buffer, tmp_temp);
         Sensor::ec_uncal_stable.pushToBuffer(getEC_uncal());
         
         Sensor::sens.conductivity = deviceParameter.EC_calibration_parameter.slope * getEC_uncal() +
@@ -154,10 +159,10 @@ void Sensor::water::loadParamSensor(const char *sens)
         Sensor::sens.conductivity = Sensor::sens.conductivity < 0 ? 0 : Sensor::sens.conductivity > 80000 ? 80000 :Sensor ::sens.conductivity;
 
         // Sensor::sens.conductivity   = conductivityTempCompensation(floating_buffer, temp_compen);
-        Sensor::sens.salinity = condToSal(getConductivity(), getWaterTemperature());
+        Sensor::sens.salinity = condToSal(getConductivity(), tmp_temp);
 
-        Sensor::sens.specificOfGravity  = density_salt_water(getSalinity(), getWaterTemperature(), getAirPressure()*1000.f);
-        Sensor::sens.specificOfGravity /= density_salt_water(0.00f, getWaterTemperature(), getAirPressure()*1000.f);
+        Sensor::sens.specificOfGravity = density_salt_water(getSalinity(), tmp_temp, getAirPressure() * 1000.f);
+        Sensor::sens.specificOfGravity /= density_salt_water(0.00f, tmp_temp, getAirPressure() * 1000.f);
 
         Sensor::EC_stable_.pushToBuffer(getConductivity());       // update stability detector data series
     }

@@ -144,7 +144,7 @@ void TaskBlink(void *pvParameters)
   for (;;)
   {
     // Serial.println("reading sensor");
-    if ( millis() - time_reading >= 150 )
+    if ( millis() - time_reading >= 50 )
     {
       Sensor::water::app();
       // Sensor::air::app();
